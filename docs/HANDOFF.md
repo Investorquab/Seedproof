@@ -1,6 +1,6 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 20:45 UTC. Kept current as work lands; the change log is at the end._
+_Last updated: 17 Nov 2026, 20:55 UTC. Kept current as work lands; the change log is at the end._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
@@ -162,7 +162,7 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 ## 8. What is left, in priority order
 
 1. **Drill**: registered. Keep no EVM window open on the Pocket during 18 Nov; proof tx on 18 Nov; owner submits the hash by 19 Nov 23:59 UTC.
-2. **Pocket vault screen**: balances, top-up (instant), withdraw (queued, countdown), cancel; uses `VaultRequest` + Home Key round trip; vault address from `contracts/deployments/diana.json`; gas from `estimateGas`.
+2. **Pocket vault screen**: mockup `docs/design/PocketVault.dc.html` (also on the design canvas) **awaiting owner approval**; then build: balances, top-up (instant), withdraw (queued, countdown), cancel; uses `VaultRequest` + Home Key round trip; vault address from `contracts/deployments/diana.json`; gas from `estimateGas`.
 3. **Steal This Seed**: give the steal account a Home Key and its own vault, fund pocket and vault, put its real 24 words in `apps/web/src/config.ts` (set `isSample: false`), and add a counter of attempts and value kept.
 4. **Contracts quality**: fuzz and invariant tests, reach 100+, Slither report, QCAI audit stage 1 and 2 (owner runs these from the Dashboard), `docs/audit/` + `docs/AUDIT.md`.
 5. **Hosting**: deploy `apps/web` (Vercel or similar); the bundle is 3.2 MB, so code-split the routes.
@@ -211,3 +211,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 | 17 Nov 19:40 | THREAT_MODEL.md written (9 attacker cases). It surfaced two vault hardening items, now on the to-do list |
 | 17 Nov 20:35 | Pocket opens both account kinds (QoreX classic by default) and only scoped windows; QoreX path proven on chain (`s9-qorex.ts`); found that testnet REST has no CORS and added a same-origin proxy (Vite + vercel.json). Docs corrected: QoreX accounts are classic `m/44'/118'`, not 0x |
 | 17 Nov 20:45 | Drafted the first build-in-public update (`docs/posts/2026-11-17-update.md`), not yet posted |
+| 17 Nov 20:55 | Vault screen mocked up (`docs/design/PocketVault.dc.html`, added to the design canvas); waiting for the owner's approval before building |
