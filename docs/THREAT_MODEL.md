@@ -55,11 +55,9 @@ The thief has the ML-DSA-87 key (if they get past the device's passphrase seal) 
 
 - Cannot send any native tx: the chain needs the classical signature too.
 - **Can** sign vault requests, and anyone may submit them, because `msg.sender` grants nothing. So:
-  - Top-ups go only to amounts within the daily cap, and the payload says where. A thief can sign a top-up to **his own address**. Exposure: one day's cap per token. This is the main residual risk of a stolen, unlocked Home Key.
+  - Top-ups only ever pay the vault's registered Pocket address (`NotPocket` otherwise), so a stolen Home Key alone cannot send even one day's cap to the thief. Changing the Pocket (`SetPocket`) waits the delay, and a guardian can cancel it. **Contract v2: tested (73 Hardhat tests), deploying after the 18 Nov drill.** The v1 demo vault at `0xadB2…f27C` still lets a stolen Home Key top up to any address, up to one day's cap.
   - Withdrawals and rule changes wait the delay (24 h by default; 1 h on the demo vault), and a guardian can cancel or freeze in that time.
 - **Response:** a guardian freezes the vault (stops top-ups and `execute`). The owner restores the Home Key from two guardians, rotates the account's PQ key to a new key (needs the classical key, which the thief lacks), then on the vault unfreezes and queues `RotateHomeKey`. The thief holds the old key too and can queue actions of his own during the delay; guardians cancel those. This race is the weak spot of the current design.
-
-Planned hardening: let top-ups pay only the vault's registered Pocket address, so a stolen Home Key alone cannot send even the daily cap elsewhere.
 
 ### 4. Home Key lost or broken
 

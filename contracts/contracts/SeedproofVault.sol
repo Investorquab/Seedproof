@@ -12,7 +12,9 @@ import {IQorePQC} from "./interfaces/IQorePQC.sol";
 /// nothing, so whoever submits the transaction (phone, relayer, thief) does not
 /// matter.
 ///
-/// - Top-ups to the pocket are instant but capped per token per UTC day.
+/// - Top-ups are instant but capped per token per UTC day, and only ever pay the
+///   registered pocket, so a stolen Home Key alone cannot send even one day's cap
+///   elsewhere. Changing the pocket waits the delay like any other rule change.
 /// - Withdrawals and rule changes wait `delay` seconds and can be cancelled by
 ///   any guardian or by the Home Key during that time.
 /// - Guardians can freeze and cancel. They can never move funds or unfreeze.
@@ -34,7 +36,8 @@ contract SeedproofVault {
         SetGuardian, //    payload: (address guardian, bool enabled)
         SetDailyLimit, //  payload: (address token, uint256 limit)
         SetDelay, //       payload: (uint64 delay)
-        RotateHomeKey //   payload: (bytes32 newHomeKeyHash)
+        RotateHomeKey, //  payload: (bytes32 newHomeKeyHash)
+        SetPocket //       payload: (address newPocket)
     }
 
     enum Status {
@@ -53,6 +56,8 @@ contract SeedproofVault {
 
     /// keccak256 of the Home Key's 2,592-byte ML-DSA-87 public key.
     bytes32 public homeKeyHash;
+    /// The only address top-ups can pay: the owner's Pocket on the EVM lane.
+    address public pocket;
     uint64 public delay;
     /// Next nonce the Home Key must sign. Every signed action consumes one.
     uint256 public nonce;
@@ -73,6 +78,7 @@ contract SeedproofVault {
     event Frozen(address indexed guardian);
     event Unfrozen(uint256 nonce);
     event DailyLimitSet(address indexed token, uint256 limit);
+    event PocketSet(address indexed pocket);
 
     error Expired();
     error WrongHomeKey();
@@ -89,6 +95,7 @@ contract SeedproofVault {
     error TransferFailed();
     error Reentrancy();
     error UnknownAction();
+    error NotPocket();
 
     modifier nonReentrant() {
         if (_lock != 1) revert Reentrancy();
@@ -101,6 +108,7 @@ contract SeedproofVault {
     /// @param limits_ the matching limits; later changes need the Home Key and the delay
     constructor(
         bytes32 homeKeyHash_,
+        address pocket_,
         uint64 delay_,
         address[] memory guardians_,
         address[] memory limitTokens_,
@@ -110,6 +118,7 @@ contract SeedproofVault {
         if (limitTokens_.length != limits_.length) revert BadLength();
         _setDelay(delay_);
         homeKeyHash = homeKeyHash_;
+        _setPocket(pocket_);
         for (uint256 i = 0; i < guardians_.length; i++) {
             _setGuardian(guardians_[i], true);
         }
@@ -164,6 +173,7 @@ contract SeedproofVault {
         bytes calldata signature
     ) external nonReentrant {
         if (frozen) revert IsFrozen();
+        if (to != pocket) revert NotPocket();
         _verify(Action.TopUp, abi.encode(token, to, amount), deadline, pubkey, signature);
         uint256 day = block.timestamp / 1 days;
         uint256 spent = spentOnDay[token][day];
@@ -218,6 +228,8 @@ contract SeedproofVault {
         } else if (action == Action.RotateHomeKey) {
             bytes32 h = abi.decode(p, (bytes32));
             homeKeyHash = h;
+        } else if (action == Action.SetPocket) {
+            _setPocket(abi.decode(p, (address)));
         } else {
             revert UnknownAction();
         }
@@ -290,7 +302,15 @@ contract SeedproofVault {
             if (d < MIN_DELAY || d > MAX_DELAY) revert BadDelay();
         } else if (action == Action.RotateHomeKey) {
             if (abi.decode(p, (bytes32)) == bytes32(0)) revert WrongHomeKey();
+        } else if (action == Action.SetPocket) {
+            if (abi.decode(p, (address)) == address(0)) revert NotPocket();
         }
+    }
+
+    function _setPocket(address p) internal {
+        if (p == address(0)) revert NotPocket();
+        pocket = p;
+        emit PocketSet(p);
     }
 
     function _setDelay(uint64 d) internal {

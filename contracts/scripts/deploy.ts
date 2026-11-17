@@ -3,6 +3,7 @@
  *
  *   PRIVATE_KEY=0x...            deployer (pays gas, has no power over the vault)
  *   HOME_KEY_PUBKEY=0x...        2,592-byte ML-DSA-87 public key of the Home Key
+ *   POCKET=0x...                 the owner's Pocket (0x address): the only address top-ups can pay
  *   GUARDIANS=0xA,0xB,0xC        optional, comma separated
  *   DELAY_SECONDS=86400          optional, 3600 to 2592000
  *   LIMIT_QOR=5                  optional daily top-up limits, in whole tokens
@@ -25,6 +26,8 @@ async function main() {
   const pub = process.env.HOME_KEY_PUBKEY;
   if (!pub || ethers.dataLength(pub) !== 2592) throw new Error("HOME_KEY_PUBKEY must be the 2,592-byte ML-DSA-87 public key");
   const homeKeyHash = ethers.keccak256(pub);
+  const pocket = process.env.POCKET ?? process.env.POCKET_EVM;
+  if (!pocket || !ethers.isAddress(pocket)) throw new Error("POCKET must be the owner's 0x Pocket address");
   const delay = BigInt(process.env.DELAY_SECONDS ?? 86400);
   const guardians = (process.env.GUARDIANS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -41,11 +44,12 @@ async function main() {
   console.log("network   ", network.name, (await ethers.provider.getNetwork()).chainId);
   console.log("deployer  ", deployer.address, ethers.formatEther(await ethers.provider.getBalance(deployer.address)), "QOR");
   console.log("homeKey   ", homeKeyHash);
+  console.log("pocket    ", pocket);
   console.log("delay     ", delay.toString(), "s");
   console.log("guardians ", guardians.join(", ") || "(none)");
 
   const Vault = await ethers.getContractFactory("SeedproofVault");
-  const vault = await Vault.deploy(homeKeyHash, delay, guardians, limitTokens, limits);
+  const vault = await Vault.deploy(homeKeyHash, pocket, delay, guardians, limitTokens, limits);
   const tx = vault.deploymentTransaction()!;
   console.log("tx        ", tx.hash);
   const receipt = await tx.wait();
@@ -59,6 +63,7 @@ async function main() {
     deployTx: tx.hash,
     block: receipt?.blockNumber,
     homeKeyHash,
+    pocket,
     delay: Number(delay),
     guardians,
     limits: Object.fromEntries(limitTokens.map((t, i) => [t, limits[i].toString()])),

@@ -1,6 +1,6 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 21:35 UTC. Kept current as work lands; the change log is at the end._
+_Last updated: 17 Nov 2026, 22:00 UTC. Kept current as work lands; the change log is at the end._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
@@ -31,7 +31,7 @@ How the split works: the chain's PQ signature covers the tx body *without* the P
 | Area | State |
 |---|---|
 | Core protocol (`packages/core`) | Done. 60 tests. Split signing for both `eth_secp256k1` (unified, QoreX-style) and Cosmos `secp256k1` accounts; clear-signing decoder; exposure check; Home Key linking; vault requests; animated-QR frames; Shamir; guardians; `MsgConvertCoin` |
-| Vault contract (`contracts`) | Done and **deployed on testnet**. 67 Hardhat tests with real ML-DSA-87 signatures. Not yet: fuzz/invariant tests, Slither, 100+ test target, QCAI audits |
+| Vault contract (`contracts`) | v1 **deployed on testnet** (`0xadB2…f27C`, the drill contract). v2 in the repo adds a registered Pocket that top-ups must pay (not deployed until after the drill). 73 Hardhat tests with real ML-DSA-87 signatures. Not yet: fuzz/invariant tests, Slither, 100+ test target, QCAI audits |
 | On-chain proof | **Done**. R1 to R5 all passed on qorechain-diana; seven thief attempts refused. See TESTNET.md |
 | Web app (`apps/web`) | Landing page with live exposure check, Pocket, Home Key, Guardian pages. Built from approved mockups. Pocket opens QoreX (classic) and 0x accounts and only opens scoped windows. **Vault screen built** (`PocketVault.tsx`, `lib/vault.ts`): balances, today's top-up left, top up, withdraw with countdown, cancel, finish when ready, guardians line; shown only when the vault trusts this account's registered Home Key. Top-up, withdraw and cancel checked end to end in headless Chrome on the live chain (TESTNET.md). Not yet: hosting; a way for each user to deploy their own vault from the app (today `config.ts` points at the one demo vault) |
 | Q-Day Drill | **Registered** on the project page (17 Nov): Pocket account + vault contract. Proof script ready (`s6-drill-proof.ts`), to run on 18 Nov UTC; hash due on the project page by 19 Nov 23:59 UTC |
@@ -169,7 +169,7 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 4. **Hosting**: deploy `apps/web` (Vercel or similar); the bundle is 3.2 MB, so code-split the routes.
 5. **Submission**: README final (add live addresses and TESTNET results), cover image 16:9 at least 1200x675, 3-minute video (script in PLAN.md section 7), project page Description and How it's made, every testnet address listed, Declared vs Verified all green.
 6. **Per-user vaults**: each owner needs their own vault bound to their Home Key. Today `apps/web/src/config.ts` points at the one demo vault and the Pocket hides it from other accounts. Add a deploy-your-vault flow (factory contract or deploy from the Pocket inside a window), then look the vault up per account.
-7. **Vault hardening found by the threat model**: restrict top-ups to the registered Pocket address (a stolen Home Key alone can currently send one day's cap anywhere), and look at the stolen-Home-Key race during rotation (THREAT_MODEL.md case 3).
+7. **Vault v2: deploy after the drill (19 Nov or later).** The contract now has a registered `pocket` (constructor arg, `SetPocket` action = 8, delayed and cancellable) and `topUp` pays only it. Tested (73 Hardhat, 62 core tests, shared vectors regenerated). Do **not** redeploy before the drill ends (18 Nov 23:59 UTC): the bot attacks the registered v1 address. Steps: open a funder window (`window.ts funder 200 3 12000000`), `source .keys/deploy.env` (it has `POCKET_EVM`), `DELAY_SECONDS=3600 LIMIT_QOR=5 LIMIT_FUSD=100 LIMIT_FETH=0.05 LIMIT_FBTC=0.002 npx hardhat run scripts/deploy.ts --network diana`, move funds from v1 (Home Key withdrawals) or fund afresh, update `VAULT_ADDRESS` in `apps/web/src/config.ts`, `deployments/diana.json`, README, TESTNET.md and the project page contract list. Still open: the stolen-Home-Key race during rotation (THREAT_MODEL.md case 3).
 8. Build in public daily on the project page and X (#BuildBeforeQDay). Drafts live in `docs/posts/`; note in the change log when one is posted.
 
 ---
@@ -215,3 +215,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 | 17 Nov 20:45 | Drafted the first build-in-public update (`docs/posts/2026-11-17-update.md`), not yet posted |
 | 17 Nov 20:55 | Vault screen mocked up (`docs/design/PocketVault.dc.html`, added to the design canvas); waiting for the owner's approval before building |
 | 17 Nov 21:35 | Vault screen built from the approved mockup; top-up, withdraw and cancel run end to end in a browser on the live chain; vault only shown to the account whose Home Key it trusts. Screenshots in `docs/screens/`. Pocket window used up again before the drill |
+| 17 Nov 22:00 | Vault v2 in code: registered `pocket`, `SetPocket` (action 8), `topUp` pays only the pocket. 73 contract and 62 core tests pass; vectors regenerated; deploy script takes `POCKET`. Deploy is held until after the drill |

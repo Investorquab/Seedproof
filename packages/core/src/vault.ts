@@ -21,6 +21,7 @@ export const VaultAction = {
   SetDailyLimit: 5,
   SetDelay: 6,
   RotateHomeKey: 7,
+  SetPocket: 8,
 } as const;
 export type VaultAction = (typeof VaultAction)[keyof typeof VaultAction];
 const ACTION_NAME = Object.fromEntries(Object.entries(VaultAction).map(([k, v]) => [v, k])) as Record<number, string>;
@@ -45,6 +46,7 @@ export const vaultPayload = {
   limit: (token: string, limit: bigint): Hex => encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [getAddress(token), limit]),
   delay: (seconds: bigint): Hex => encodeAbiParameters([{ type: "uint64" }], [seconds]),
   homeKey: (hash: Hex): Hex => encodeAbiParameters([{ type: "bytes32" }], [hash]),
+  pocket: (addr: string): Hex => encodeAbiParameters([{ type: "address" }], [getAddress(addr)]),
 };
 
 /** The exact bytes `SeedproofVault.signedMessage(action, payload, nonce, deadline)` returns. */
@@ -111,7 +113,7 @@ export function isVaultRequest(x: unknown): x is VaultRequest {
     /^\d+$/.test(r.nonce) &&
     Number.isInteger(r.action) &&
     r.action >= 0 &&
-    r.action <= 7 &&
+    r.action <= 8 &&
     /^0x([0-9a-fA-F]{2})*$/.test(r.payload) &&
     Number.isInteger(r.deadline)
   );
@@ -181,6 +183,14 @@ export function describeVaultRequest(req: VaultRequest): DescribedVaultRequest {
         const [d] = decodeAbiParameters([{ type: "uint64" }], req.payload);
         const hours = Number(d) / 3600;
         return { lines: [line(`Change the waiting period to ${hours >= 1 ? `${hours} hours` : `${d} seconds`}`, "critical")], understood: true };
+      }
+      case VaultAction.SetPocket: {
+        const [p] = decodeAbiParameters([{ type: "address" }], req.payload);
+        const same = getAddress(p) === getAddress(req.pocket);
+        return {
+          lines: [line(`Make ${same ? "your Pocket" : short(p)} the only address top-ups can pay, after the waiting period`, same ? "high" : "critical")],
+          understood: true,
+        };
       }
       case VaultAction.RotateHomeKey:
         return { lines: [line("Replace the Home Key that controls this vault", "critical")], understood: true };

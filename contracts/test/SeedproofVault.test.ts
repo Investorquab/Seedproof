@@ -43,7 +43,7 @@ describe("SeedproofVault", function () {
     [owner, guardian, guardian2, thief, stranger] = await ethers.getSigners();
     mock = await installPqcDouble();
     const Vault = await ethers.getContractFactory("SeedproofVault");
-    vault = await Vault.deploy(keyHash(home), 24 * HOUR, [guardian.address, guardian2.address], [], []);
+    vault = await Vault.deploy(keyHash(home), owner.address, 24 * HOUR, [guardian.address, guardian2.address], [], []);
     const Token = await ethers.getContractFactory("TestToken");
     token = await Token.deploy();
     await owner.sendTransaction({ to: await vault.getAddress(), value: E("100") });
@@ -80,34 +80,34 @@ describe("SeedproofVault", function () {
 
     it("rejects a zero Home Key hash", async () => {
       const Vault = await ethers.getContractFactory("SeedproofVault");
-      await expect(Vault.deploy(ethers.ZeroHash, DAY, [], [], [])).to.be.revertedWithCustomError(vault, "WrongHomeKey");
+      await expect(Vault.deploy(ethers.ZeroHash, owner.address, DAY, [], [], [])).to.be.revertedWithCustomError(vault, "WrongHomeKey");
     });
 
     it("rejects a delay shorter than 1 hour", async () => {
       const Vault = await ethers.getContractFactory("SeedproofVault");
-      await expect(Vault.deploy(keyHash(home), HOUR - 1, [], [], [])).to.be.revertedWithCustomError(vault, "BadDelay");
+      await expect(Vault.deploy(keyHash(home), owner.address, HOUR - 1, [], [], [])).to.be.revertedWithCustomError(vault, "BadDelay");
     });
 
     it("rejects a delay longer than 30 days", async () => {
       const Vault = await ethers.getContractFactory("SeedproofVault");
-      await expect(Vault.deploy(keyHash(home), 30 * DAY + 1, [], [], [])).to.be.revertedWithCustomError(vault, "BadDelay");
+      await expect(Vault.deploy(keyHash(home), owner.address, 30 * DAY + 1, [], [], [])).to.be.revertedWithCustomError(vault, "BadDelay");
     });
 
     it("rejects a zero-address guardian", async () => {
       const Vault = await ethers.getContractFactory("SeedproofVault");
-      await expect(Vault.deploy(keyHash(home), DAY, [ethers.ZeroAddress], [], [])).to.be.revertedWithCustomError(vault, "BadGuardian");
+      await expect(Vault.deploy(keyHash(home), owner.address, DAY, [ethers.ZeroAddress], [], [])).to.be.revertedWithCustomError(vault, "BadGuardian");
     });
 
     it("counts a duplicated guardian once", async () => {
       const Vault = await ethers.getContractFactory("SeedproofVault");
-      const v = await Vault.deploy(keyHash(home), DAY, [guardian.address, guardian.address], [], []);
+      const v = await Vault.deploy(keyHash(home), owner.address, DAY, [guardian.address, guardian.address], [], []);
       expect(await v.guardianCount()).to.equal(1n);
     });
 
     it("sets starting daily limits from the constructor", async () => {
       const Vault = await ethers.getContractFactory("SeedproofVault");
       const t = ethers.Wallet.createRandom().address;
-      const v = await Vault.deploy(keyHash(home), DAY, [], [ethers.ZeroAddress, t], [E("5"), 123n]);
+      const v = await Vault.deploy(keyHash(home), owner.address, DAY, [], [ethers.ZeroAddress, t], [E("5"), 123n]);
       expect(await v.dailyLimit(ethers.ZeroAddress)).to.equal(E("5"));
       expect(await v.dailyLimit(t)).to.equal(123n);
       await expect(v.deploymentTransaction()).to.emit(v, "DailyLimitSet").withArgs(t, 123n);
@@ -115,13 +115,13 @@ describe("SeedproofVault", function () {
 
     it("rejects starting limits whose lengths do not match", async () => {
       const Vault = await ethers.getContractFactory("SeedproofVault");
-      await expect(Vault.deploy(keyHash(home), DAY, [], [ethers.ZeroAddress], [])).to.be.revertedWithCustomError(vault, "BadLength");
+      await expect(Vault.deploy(keyHash(home), owner.address, DAY, [], [ethers.ZeroAddress], [])).to.be.revertedWithCustomError(vault, "BadLength");
     });
 
     it("caps guardians at 8", async () => {
       const Vault = await ethers.getContractFactory("SeedproofVault");
       const nine = Array.from({ length: 9 }, () => ethers.Wallet.createRandom().address);
-      await expect(Vault.deploy(keyHash(home), DAY, nine, [], [])).to.be.revertedWithCustomError(vault, "TooManyGuardians");
+      await expect(Vault.deploy(keyHash(home), owner.address, DAY, nine, [], [])).to.be.revertedWithCustomError(vault, "TooManyGuardians");
     });
 
     it("accepts native deposits and emits Deposited", async () => {
@@ -141,7 +141,7 @@ describe("SeedproofVault", function () {
       expect(await vault.signedMessage(Action.TopUp, p, 1, 100)).to.not.equal(base);
       expect(await vault.signedMessage(Action.TopUp, p, 0, 101)).to.not.equal(base);
       const Vault = await ethers.getContractFactory("SeedproofVault");
-      const other = await Vault.deploy(keyHash(home), DAY, [], [], []);
+      const other = await Vault.deploy(keyHash(home), owner.address, DAY, [], [], []);
       expect(await other.signedMessage(Action.TopUp, p, 0, 100)).to.not.equal(base);
     });
 
@@ -243,8 +243,17 @@ describe("SeedproofVault", function () {
       const s = await sign(vault, mock, home, Action.TopUp, enc.transfer(NATIVE, ethers.ZeroAddress, 1n));
       await expect(vault.topUp(NATIVE, ethers.ZeroAddress, 1n, s.deadline, s.pubkey, s.signature)).to.be.revertedWithCustomError(
         vault,
-        "TransferFailed",
+        "NotPocket",
       );
+    });
+
+    it("pays only the registered pocket, even with a valid Home Key signature (stolen Home Key)", async () => {
+      const s = await sign(vault, mock, home, Action.TopUp, enc.transfer(NATIVE, thief.address, E("1")));
+      const before = await vault.nonce();
+      await expect(
+        vault.connect(thief).topUp(NATIVE, thief.address, E("1"), s.deadline, s.pubkey, s.signature),
+      ).to.be.revertedWithCustomError(vault, "NotPocket");
+      expect(await vault.nonce()).to.equal(before); // nothing consumed
     });
 
     it("sends to the signed recipient no matter who submits", async () => {
@@ -262,18 +271,18 @@ describe("SeedproofVault", function () {
     });
 
     it("cannot top up with a key derived from the seed (wrong Home Key)", async () => {
-      const s = await sign(vault, mock, thiefPq, Action.TopUp, enc.transfer(NATIVE, thief.address, E("1")));
+      const s = await sign(vault, mock, thiefPq, Action.TopUp, enc.transfer(NATIVE, owner.address, E("1")));
       await expect(
-        vault.connect(thief).topUp(NATIVE, thief.address, E("1"), s.deadline, s.pubkey, s.signature),
+        vault.connect(thief).topUp(NATIVE, owner.address, E("1"), s.deadline, s.pubkey, s.signature),
       ).to.be.revertedWithCustomError(vault, "WrongHomeKey");
     });
 
     it("cannot pass by claiming the Home Key's public key with its own signature", async () => {
-      const s = await sign(vault, mock, thiefPq, Action.TopUp, enc.transfer(NATIVE, thief.address, E("1")), {
+      const s = await sign(vault, mock, thiefPq, Action.TopUp, enc.transfer(NATIVE, owner.address, E("1")), {
         claimPubkey: home.publicKey,
       });
       await expect(
-        vault.connect(thief).topUp(NATIVE, thief.address, E("1"), s.deadline, s.pubkey, s.signature),
+        vault.connect(thief).topUp(NATIVE, owner.address, E("1"), s.deadline, s.pubkey, s.signature),
       ).to.be.revertedWithCustomError(vault, "BadSignature");
     });
 
@@ -281,7 +290,7 @@ describe("SeedproofVault", function () {
       const s = await sign(vault, mock, home, Action.TopUp, enc.transfer(NATIVE, owner.address, E("1")));
       await expect(
         vault.connect(thief).topUp(NATIVE, thief.address, E("1"), s.deadline, s.pubkey, s.signature),
-      ).to.be.revertedWithCustomError(vault, "BadSignature");
+      ).to.be.revertedWithCustomError(vault, "NotPocket");
     });
 
     it("cannot raise the amount of an owner-signed top-up", async () => {
@@ -565,6 +574,46 @@ describe("SeedproofVault", function () {
       await vault.execute((await vault.queueLength()) - 1n);
       expect(await vault.isGuardian(stranger.address)).to.equal(false);
       expect(await vault.guardianCount()).to.equal(2n);
+    });
+
+    it("starts with the pocket given at deployment", async () => {
+      expect(await vault.pocket()).to.equal(owner.address);
+    });
+
+    it("refuses a zero pocket at deployment", async () => {
+      const Vault = await ethers.getContractFactory("SeedproofVault");
+      await expect(Vault.deploy(keyHash(home), ethers.ZeroAddress, DAY, [], [], [])).to.be.revertedWithCustomError(vault, "NotPocket");
+    });
+
+    it("moves the pocket only after the delay, and top-ups follow it", async () => {
+      await setLimitNow(NATIVE, E("5"));
+      const p = enc.pocket(stranger.address);
+      const s = await sign(vault, mock, home, Action.SetPocket, p);
+      await expect(vault.queue(Action.SetPocket, p, s.deadline, s.pubkey, s.signature)).to.emit(vault, "Queued_");
+      const id = (await vault.queueLength()) - 1n;
+      await expect(vault.execute(id)).to.be.revertedWithCustomError(vault, "NotReady");
+      expect(await vault.pocket()).to.equal(owner.address);
+      await increase(24 * HOUR);
+      await expect(vault.execute(id)).to.emit(vault, "PocketSet").withArgs(stranger.address);
+      const t = await sign(vault, mock, home, Action.TopUp, enc.transfer(NATIVE, stranger.address, E("1")));
+      await expect(vault.topUp(NATIVE, stranger.address, E("1"), t.deadline, t.pubkey, t.signature)).to.changeEtherBalance(stranger, E("1"));
+    });
+
+    it("lets a guardian cancel a pocket change (stolen Home Key)", async () => {
+      const p = enc.pocket(thief.address);
+      const s = await sign(vault, mock, home, Action.SetPocket, p);
+      await vault.queue(Action.SetPocket, p, s.deadline, s.pubkey, s.signature);
+      const id = (await vault.queueLength()) - 1n;
+      await vault.connect(guardian).cancel(id);
+      await increase(24 * HOUR);
+      await expect(vault.execute(id)).to.be.revertedWithCustomError(vault, "NotPending");
+      expect(await vault.pocket()).to.equal(owner.address);
+    });
+
+    it("refuses a zero pocket at queue time", async () => {
+      const p = enc.pocket(ethers.ZeroAddress);
+      const s = await sign(vault, mock, home, Action.SetPocket, p);
+      await expect(vault.queue(Action.SetPocket, p, s.deadline, s.pubkey, s.signature)).to.be.revertedWithCustomError(vault, "NotPocket");
     });
 
     it("refuses a zero-address guardian at queue time", async () => {

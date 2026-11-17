@@ -14,6 +14,7 @@ const cases = [
   { name: "cancel", chainId: 31337n, action: VaultAction.Cancel, payload: vaultPayload.id(3n), nonce: 99n, deadline: 2_000_000_000n },
   { name: "unfreeze", chainId: 31337n, action: VaultAction.Unfreeze, payload: vaultPayload.none(), nonce: 1n, deadline: 5n },
   { name: "set-delay", chainId: 31337n, action: VaultAction.SetDelay, payload: vaultPayload.delay(172_800n), nonce: 2n, deadline: 6n },
+  { name: "set-pocket", chainId: 31337n, action: VaultAction.SetPocket, payload: vaultPayload.pocket(pocket), nonce: 4n, deadline: 7n },
   { name: "diana-topup", chainId: 9800n, action: VaultAction.TopUp, payload: vaultPayload.transfer(fUSD, pocket, 1n), nonce: 0n, deadline: 1_800_000_000n },
 ];
 const out = {

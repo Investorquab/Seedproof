@@ -114,3 +114,15 @@ describe("Home Key signs what it rebuilt, not what the phone sent", () => {
     expect(() => signVaultRequest(req(VaultAction.TopUp, "0x00"), k, NOW)).toThrow(/not understood/);
   });
 });
+
+describe("SetPocket", () => {
+  it("reads as a pocket change and flags a stranger's address as critical", async () => {
+    const { describeVaultRequest, vaultPayload, VaultAction, isVaultRequest } = await import("../src/vault.js");
+    const base = { v: 1 as const, kind: "seedproof/vault-request" as const, account: "qor1x", pocket: "0x4dd783A871a2c413F3730CF645fCc60DE05B1A7f", evmChainId: "9800", vault: "0xadB21AAC72079Ce455a0b09ee56f069bf5E4f27C", nonce: "0", deadline: 1 };
+    const own = { ...base, action: VaultAction.SetPocket, payload: vaultPayload.pocket(base.pocket) };
+    const other = { ...base, action: VaultAction.SetPocket, payload: vaultPayload.pocket("0x2644E08518893Cd1D793386a4306B0e6CaB86e61") };
+    expect(isVaultRequest(own)).toBe(true);
+    expect(describeVaultRequest(own).lines[0]!.text).toMatch(/^Make your Pocket the only address top-ups can pay/);
+    expect(describeVaultRequest(other).lines[0]!.risk).toBe("critical");
+  });
+});

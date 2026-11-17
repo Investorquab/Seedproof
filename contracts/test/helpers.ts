@@ -20,6 +20,7 @@ export enum Action {
   SetDailyLimit,
   SetDelay,
   RotateHomeKey,
+  SetPocket,
 }
 
 const coder = ethers.AbiCoder.defaultAbiCoder();
@@ -30,6 +31,7 @@ export const enc = {
   limit: (token: string, limit: bigint) => coder.encode(["address", "uint256"], [token, limit]),
   delay: (d: number) => coder.encode(["uint64"], [d]),
   key: (h: string) => coder.encode(["bytes32"], [h]),
+  pocket: (a: string) => coder.encode(["address"], [a]),
 };
 
 export const keyHash = (k: PqcKeypair) => ethers.keccak256(k.publicKey);
