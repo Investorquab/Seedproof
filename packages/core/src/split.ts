@@ -87,9 +87,14 @@ export function requestSignBytes(req: ApprovalRequest): Uint8Array {
   return hybridSignBytes(req.signBytesVersion, req.chainId, b64.dec(req.bodyB0), b64.dec(req.authInfo));
 }
 
+export type RefusalReason = "expired" | "not-understood" | "has-extension" | "user-declined";
+
 export class ApprovalRefused extends Error {
-  constructor(public readonly reason: "expired" | "not-understood" | "has-extension" | "user-declined") {
+  readonly reason: RefusalReason;
+  constructor(reason: RefusalReason) {
     super(`approval refused: ${reason}`);
+    this.name = "ApprovalRefused";
+    this.reason = reason;
   }
 }
 
@@ -144,7 +149,7 @@ export async function assembleSignedTx(
     TxRaw.fromPartial({
       bodyBytes,
       authInfoBytes,
-      signatures: [new Uint8Array(Buffer.from(signature.signature, "base64"))],
+      signatures: [b64.dec(signature.signature)],
     }),
   ).finish();
 }

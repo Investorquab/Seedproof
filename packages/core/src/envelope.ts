@@ -37,9 +37,21 @@ export interface ApprovalResponse {
   pqcSignature: string;
 }
 
+/** Base64 that works the same in browsers and Node (no Buffer). */
 export const b64 = {
-  enc: (b: Uint8Array): string => Buffer.from(b).toString("base64"),
-  dec: (s: string): Uint8Array => new Uint8Array(Buffer.from(s, "base64")),
+  enc(bytes: Uint8Array): string {
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(bin);
+  },
+  dec(text: string): Uint8Array {
+    const bin = atob(text);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  },
 };
 
 export function isApprovalRequest(x: unknown): x is ApprovalRequest {

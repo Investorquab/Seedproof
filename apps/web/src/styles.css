@@ -1,0 +1,97 @@
+/* Seedproof: the split key.
+   Slate is the Pocket (what you carry). Brass is the Home Key (what stays home). */
+:root {
+  --paper: #E9ECEF;
+  --card: #F7F8F9;
+  --ink: #1C2530;
+  --ink-2: #2A3542;
+  --ink-soft: #46525F;
+  --ink-mute: #5B6672;
+  --line: #D2D8DE;
+  --brass: #B5862F;
+  --brass-pale: #F1E3BF;
+  --brass-card: #FBF4E2;
+  --brass-line: #E7D3A1;
+  --brass-ink: #3F2E0B;
+  --brass-ink-2: #5E4513;
+  --refused: #A8322A;
+  --refused-bg: #FBEDEB;
+  --refused-ink: #5A1C17;
+  --verified: #2E6A50;
+  --verified-bg: #E3F0E9;
+
+  --font-body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
+  --font-display: "Archivo", "Arial Narrow", sans-serif;
+
+  --r-sm: 8px;
+  --r-btn: 10px;
+  --r-md: 14px;
+  --r-lg: 22px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.55;
+}
+a { color: var(--ink); }
+a:hover { color: #8A6420; }
+:focus-visible { outline: 3px solid var(--brass); outline-offset: 3px; }
+img, svg { display: block; }
+button, input, textarea { font: inherit; color: inherit; }
+
+/* Display type: wide and heavy, like an engraved key blank. */
+.display { font-family: var(--font-display); font-stretch: 112%; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; margin: 0; }
+.display-xl { font-size: clamp(44px, 6vw, 72px); font-weight: 850; line-height: 0.98; letter-spacing: -0.025em; }
+.display-l { font-size: clamp(32px, 4vw, 44px); }
+.display-m { font-size: 30px; font-stretch: 118%; }
+.display-s { font-size: 22px; }
+.seed-word { font-family: var(--font-display); font-stretch: 78%; font-weight: 600; letter-spacing: 0.01em; }
+.muted { color: var(--ink-soft); }
+.small { font-size: 15px; }
+.tiny { font-size: 13px; }
+
+/* Buttons. Each says what it does. */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 22px; border-radius: var(--r-btn);
+  font-weight: 700; font-size: 17px; text-decoration: none; cursor: pointer; border: 0;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ink { background: var(--ink); color: var(--paper); }
+.btn-ink:hover { color: var(--paper); background: #26313E; }
+.btn-outline { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
+.btn-brass { background: var(--brass-ink); color: var(--brass-pale); }
+.btn-brass:hover { color: var(--brass-pale); background: #2E2108; }
+.btn-brass-outline { background: transparent; color: var(--brass-ink); box-shadow: inset 0 0 0 2px var(--brass-ink); }
+.btn-ghost { background: transparent; color: inherit; }
+.btn-block { width: 100%; }
+
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field label { font-weight: 700; font-size: 16px; }
+.input {
+  font-size: 17px; padding: 13px 15px; border-radius: var(--r-btn);
+  border: 2px solid #AEB7C0; background: #fff; color: var(--ink); width: 100%;
+}
+.input:focus-visible { outline-offset: 1px; }
+textarea.input { resize: vertical; }
+
+.notice { display: flex; gap: 16px; align-items: flex-start; border-radius: var(--r-md); padding: 18px 20px; }
+.notice-bad { background: var(--refused-bg); color: var(--refused-ink); }
+.notice-good { background: var(--verified-bg); color: #1D4433; }
+.notice-plain { background: var(--card); color: var(--ink); }
+.notice strong { font-family: var(--font-display); font-stretch: 110%; font-size: 21px; display: block; margin-bottom: 4px; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

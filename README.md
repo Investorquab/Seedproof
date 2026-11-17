@@ -41,17 +41,24 @@ The Home Key signs first, on its own device. QoreChain's post-quantum signature 
 ## Repository layout
 
 ```
-packages/core   two-device signing protocol, clear-signing decoder, exposure check
-contracts/      Seedproof Vault (Hardhat + solc-js), 64 tests
-apps/pocket     phone app                             [in progress]
-apps/homekey    Home Key app                          [in progress]
-apps/site       landing, exposure check, Steal This Seed   [in progress]
+packages/core   two-device signing protocol, clear-signing decoder, exposure check, QR frames (20 tests)
+contracts/      Seedproof Vault (Hardhat + solc-js, 64 tests)
+apps/web        landing page, Pocket (phone) and Home Key (second device)
 ```
+
+## Run the app
+
+```bash
+cd packages/core && npm install
+cd ../../apps/web && npm install && npm run dev
+```
+
+Routes: `/` landing and "One secret or two?" check, `/pocket` the phone, `/home-key` the second device. Secrets are kept in the browser sealed with your passphrase (PBKDF2 600,000 rounds, AES-GCM). Testnet only.
 
 ## Run the tests
 
 ```bash
-# two-device signing protocol (13 tests)
+# two-device signing protocol and QR frames (20 tests)
 cd packages/core && npm install && npm test
 
 # Seedproof Vault (64 tests)
