@@ -336,6 +336,8 @@ contract SeedproofVault {
             (bool ok,) = to.call{value: amount}("");
             if (!ok) revert TransferFailed();
         } else {
+            // A call to an address with no code "succeeds" and moves nothing; refuse it.
+            if (token.code.length == 0) revert TransferFailed();
             (bool ok, bytes memory data) = token.call(abi.encodeWithSelector(0xa9059cbb, to, amount));
             if (!ok || (data.length != 0 && !abi.decode(data, (bool)))) revert TransferFailed();
         }

@@ -247,6 +247,16 @@ describe("SeedproofVault", function () {
       );
     });
 
+    it("refuses a token address with no contract code instead of pretending to pay", async () => {
+      const ghost = ethers.Wallet.createRandom().address;
+      await setLimitNow(ghost, 100n);
+      const s = await sign(vault, mock, home, Action.TopUp, enc.transfer(ghost, owner.address, 1n));
+      await expect(vault.topUp(ghost, owner.address, 1n, s.deadline, s.pubkey, s.signature)).to.be.revertedWithCustomError(
+        vault,
+        "TransferFailed",
+      );
+    });
+
     it("pays only the registered pocket, even with a valid Home Key signature (stolen Home Key)", async () => {
       const s = await sign(vault, mock, home, Action.TopUp, enc.transfer(NATIVE, thief.address, E("1")));
       const before = await vault.nonce();

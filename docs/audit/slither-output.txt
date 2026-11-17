@@ -1,0 +1,48 @@
+Multiple frameworks detected: solc, Solc-json. Using solc (highest priority). Use --compile-force-framework to override.
+'solc --version' running
+'solc contracts/SeedproofVault.sol --combined-json abi,ast,bin,bin-runtime,srcmap,srcmap-runtime,userdoc,devdoc,hashes --optimize --optimize-runs 200 --evm-version cancun --allow-paths .,contracts' running
+INFO:Detectors:
+Detector: arbitrary-send-eth
+SeedproofVault._transfer(address,address,uint256) (contracts/SeedproofVault.sol#333-344) sends eth to arbitrary user
+	Dangerous calls:
+	- (ok,None) = to.call{value: amount}() (contracts/SeedproofVault.sol#336)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#functions-that-send-ether-to-arbitrary-destinations
+INFO:Detectors:
+Detector: timestamp
+SeedproofVault._verify(SeedproofVault.Action,bytes,uint256,bytes,bytes) (contracts/SeedproofVault.sol#148-162) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp > deadline (contracts/SeedproofVault.sol#155)
+SeedproofVault.execute(uint256) (contracts/SeedproofVault.sol#206-236) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp < q.readyAt (contracts/SeedproofVault.sol#210)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#block-timestamp
+INFO:Detectors:
+Detector: pragma
+2 different versions of Solidity are used:
+	- Version constraint 0.8.28 is used by:
+		-0.8.28 (contracts/SeedproofVault.sol#2)
+	- Version constraint ^0.8.24 is used by:
+		-^0.8.24 (contracts/interfaces/IQorePQC.sol#2)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#different-pragma-directives-are-used
+INFO:Detectors:
+Detector: costly-loop
+SeedproofVault._setGuardian(address,bool) (contracts/SeedproofVault.sol#321-331) has costly operations inside a loop:
+	- guardianCount ++ (contracts/SeedproofVault.sol#326)
+	Calls stack containing the loop:
+		SeedproofVault.constructor(bytes32,address,uint64,address[],address[],uint256[])
+SeedproofVault._setGuardian(address,bool) (contracts/SeedproofVault.sol#321-331) has costly operations inside a loop:
+	- guardianCount -- (contracts/SeedproofVault.sol#328)
+	Calls stack containing the loop:
+		SeedproofVault.constructor(bytes32,address,uint64,address[],address[],uint256[])
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#costly-operations-inside-a-loop
+INFO:Detectors:
+Detector: cyclomatic-complexity
+SeedproofVault._validatePayload(SeedproofVault.Action,bytes) (contracts/SeedproofVault.sol#290-308) has a high cyclomatic complexity (13).
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#cyclomatic-complexity
+INFO:Detectors:
+Detector: low-level-calls
+Low level call in SeedproofVault._transfer(address,address,uint256) (contracts/SeedproofVault.sol#333-344):
+	- (ok,None) = to.call{value: amount}() (contracts/SeedproofVault.sol#336)
+	- (ok_scope_0,data) = token.call(abi.encodeWithSelector(0xa9059cbb,to,amount)) (contracts/SeedproofVault.sol#341)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#low-level-calls
+INFO:Slither:contracts/SeedproofVault.sol analyzed (2 contracts with 102 detectors), 8 result(s) found
