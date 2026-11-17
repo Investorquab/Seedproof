@@ -1,5 +1,7 @@
 # Seedproof handoff
 
+_Last updated: 17 Nov 2026, 18:36 UTC. Kept current as work lands; the change log is at the end._
+
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
 - Hackathon: Build Before Q-Day, the QoreChain Developer Fest (https://build.qorechain.io). Category: **Post-Quantum dApp**.
@@ -105,7 +107,7 @@ Keys are **not** in git. They live in a local folder that `packages/core/scripts
 - `.keys/pocket-homekey.txt`: the Pocket's Home Key recovery code (QRC1). **Whoever holds this controls the vault and the Pocket's native lane.** Without it, the vault funds are stuck until guardians are set up.
 - `.keys/deploy.env`: `PRIVATE_KEY`, `HOME_KEY_PUBKEY`, `GUARDIANS` for `contracts/scripts/deploy.ts`
 
-The owner must pass these to the next person privately (password manager or encrypted file), never through the repo, an issue, or chat. If they are lost, run `s0-accounts.ts` for new accounts and redeploy; the old testnet funds are then gone.
+A copy of all three files was sent to the owner on 17 Nov 2026 (`seedproof-keys.zip`). The owner must pass these to the next person privately (password manager or encrypted file), never through the repo, an issue, or chat. If they are lost, run `s0-accounts.ts` for new accounts and redeploy; the old testnet funds are then gone.
 
 ### Scripts (run from `packages/core`, in order)
 
@@ -185,3 +187,12 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 - Mock up new screens before building them; keep edits to existing screens minimal.
 - Every testnet claim needs a tx hash in TESTNET.md. Label anything simulated.
 - Add a line to AI_USAGE.md with each meaningful commit.
+
+---
+
+## Change log
+
+| When (UTC) | What changed |
+|---|---|
+| 17 Nov 18:30 | Handoff written: status, runbook, chain lessons, drill plan, remaining work |
+| 17 Nov 18:36 | Key files sent to the owner; drill account choice explained (register the Pocket, not the personal QoreX wallet) |
