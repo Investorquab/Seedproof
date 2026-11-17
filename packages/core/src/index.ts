@@ -5,3 +5,5 @@ export * from "./exposure.js";
 export * from "./frames.js";
 export * from "./link.js";
 export * from "./vault.js";
+export * from "./shamir.js";
+export * from "./guardians.js";

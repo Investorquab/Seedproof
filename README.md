@@ -21,7 +21,7 @@ So the way people actually lose crypto (a seed phrase taken by an infostealer, a
 | **Pocket** (your phone) | the classical key | spend inside today's small EVM window; ask the Home Key for anything else |
 | **Home Key** (a second device, can be offline) | an independent ML-DSA-87 key, not derived from your seed | approve windows, native sends, key changes and vault withdrawals, after reading them in plain language |
 | **Vault** (EVM contract) | your savings | release only with a Home Key signature, verified on chain by `pqcVerify`, after a 24-hour delay you can cancel |
-| **Guardians** (2 of 3) | sealed shares of the Home Key | rebuild the Home Key if you lose it |
+| **Guardians** (2 of 3) | one QoreSeal-sealed piece each (ML-KEM-1024 + X25519) | two of them, in person, rebuild the Home Key on a new device; one alone learns nothing |
 
 The Home Key signs first, on its own device. QoreChain's post-quantum signature covers the transaction body and auth info, not the classical signature, so the phone attaches the classical signature afterwards. Neither device ever holds both keys.
 
@@ -41,10 +41,10 @@ The Home Key signs first, on its own device. QoreChain's post-quantum signature 
 ## Repository layout
 
 ```
-packages/core   two-device signing, Home Key linking, vault requests, clear-signing decoder,
-                exposure check, QR frames (43 tests)
+packages/core   two-device signing, Home Key linking, vault requests, guardian recovery
+                (Shamir 2 of 3 + QoreSeal), clear-signing decoder, exposure check, QR frames (56 tests)
 contracts/      Seedproof Vault (Hardhat + solc-js, 65 tests incl. shared vectors with core)
-apps/web        landing page, Pocket (phone) and Home Key (second device)
+apps/web        landing page, Pocket (phone), Home Key (second device), Guardian
 ```
 
 ## Run the app
@@ -54,12 +54,12 @@ cd packages/core && npm install
 cd ../../apps/web && npm install && npm run dev
 ```
 
-Routes: `/` landing and "One secret or two?" check, `/pocket` the phone, `/home-key` the second device. Secrets are kept in the browser sealed with your passphrase (PBKDF2 600,000 rounds, AES-GCM). Testnet only.
+Routes: `/` landing and "One secret or two?" check, `/pocket` the phone, `/home-key` the second device, `/guardian` for the people who can help rebuild a lost Home Key. Secrets are kept in the browser sealed with your passphrase (PBKDF2 600,000 rounds, AES-GCM). Testnet only.
 
 ## Run the tests
 
 ```bash
-# protocol (43 tests)
+# protocol (56 tests)
 cd packages/core && npm install && npm test
 
 # Seedproof Vault (65 tests)

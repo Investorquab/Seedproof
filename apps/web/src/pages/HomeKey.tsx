@@ -7,10 +7,17 @@ import {
   encodeFrames,
   isApprovalRequest,
   isLinkRequest,
+  isGuardianCard,
+  isGuardianShare,
   isVaultRequest,
+  recoverHomeKey,
+  sealToGuardians,
   signLinkRequest,
   signVaultRequest,
   type DecodedLine,
+  type GuardianCard,
+  type GuardianEnvelope,
+  type GuardianShare,
 } from "@seedproof/core";
 import { generatePqcRecoveryCode, isValidBech32, pqcKeyFromRecoveryCode, sha256Hex, type PqcKeypair } from "@qorechain/sdk";
 import { Logo } from "../components/Logo";
@@ -46,7 +53,10 @@ type Screen =
   | { name: "ready" }
   | { name: "review"; review: PendingReview }
   | { name: "signed"; summary: string; frames: string[] }
-  | { name: "refused"; why: string };
+  | { name: "refused"; why: string }
+  | { name: "guardians-collect"; cards: GuardianCard[] }
+  | { name: "guardians-deliver"; envs: GuardianEnvelope[]; at: number }
+  | { name: "restore" };
 
 const fingerprint = (k: PqcKeypair) => sha256Hex(k.publicKey).replace(/^0x/, "").slice(0, 16).replace(/(.{4})(?=.)/g, "$1 ");
 const minutesLeft = (unixSeconds: number) => Math.max(0, Math.round((unixSeconds - Date.now() / 1000) / 60));
@@ -54,7 +64,7 @@ const expiresText = (m: number) => (m > 0 ? `In ${m} minute${m === 1 ? "" : "s"}
 
 export function HomeKey() {
   const [screen, setScreen] = useState<Screen>(() => (hasSealed(STORE) ? { name: "locked" } : { name: "setup" }));
-  const [key, setKey] = useState<{ address: string; pq: PqcKeypair } | null>(null);
+  const [key, setKey] = useState<{ address: string; pq: PqcKeypair; code: string } | null>(null);
 
   /** Turn whatever the phone sent into something a person can read before signing. */
   const toReview = (msg: unknown): PendingReview | string => {
@@ -140,14 +150,20 @@ export function HomeKey() {
           {key && <span className="chip chip-home">{shortAddress(key.address)}</span>}
         </header>
 
-        {screen.name === "setup" && <Setup onCreated={(address, code) => setScreen({ name: "show-code", address, code })} />}
+        {screen.name === "setup" && (
+          <Setup onCreated={(address, code) => setScreen({ name: "show-code", address, code })} onRestore={() => setScreen({ name: "restore" })} />
+        )}
+
+        {screen.name === "restore" && (
+          <Restore onRestored={(address, code) => setScreen({ name: "show-code", address, code })} onCancel={() => setScreen({ name: "setup" })} />
+        )}
 
         {screen.name === "show-code" && (
           <ShowCode
             address={screen.address}
             code={screen.code}
             onSealed={(pq) => {
-              setKey({ address: screen.address, pq });
+              setKey({ address: screen.address, pq, code: screen.code });
               setScreen({ name: "ready" });
             }}
           />
@@ -156,7 +172,7 @@ export function HomeKey() {
         {screen.name === "locked" && (
           <Unlock
             onUnlocked={(s) => {
-              setKey({ address: s.address, pq: pqcKeyFromRecoveryCode(s.recoveryCode, s.address) });
+              setKey({ address: s.address, pq: pqcKeyFromRecoveryCode(s.recoveryCode, s.address), code: s.recoveryCode });
               setScreen({ name: "ready" });
             }}
             onReset={() => {
@@ -169,6 +185,7 @@ export function HomeKey() {
         {screen.name === "ready" && key && (
           <Ready
             pq={key.pq}
+            onGuardians={() => setScreen({ name: "guardians-collect", cards: [] })}
             onRequest={(msg) => {
               const r = toReview(msg);
               setScreen(typeof r === "string" ? { name: "refused", why: r } : { name: "review", review: r });
@@ -205,6 +222,46 @@ export function HomeKey() {
           </section>
         )}
 
+        {screen.name === "guardians-collect" && key && (
+          <GuardiansCollect
+            cards={screen.cards}
+            onCard={(c) =>
+              setScreen({ name: "guardians-collect", cards: screen.cards.some((x) => x.mlkemPublicKey === c.mlkemPublicKey) ? screen.cards : [...screen.cards, c] })
+            }
+            onSeal={() => {
+              try {
+                const envs = sealToGuardians({ chainId: NETWORK.chainId, account: key.address, recoveryCode: key.code, guardians: screen.cards, threshold: screen.cards.length >= 4 ? 3 : 2 });
+                setScreen({ name: "guardians-deliver", envs, at: 0 });
+              } catch (e) {
+                setScreen({ name: "refused", why: e instanceof Error ? e.message : "Could not seal the pieces." });
+              }
+            }}
+            onCancel={() => setScreen({ name: "ready" })}
+          />
+        )}
+
+        {screen.name === "guardians-deliver" && (
+          <section className="stack">
+            <div className="stack-tight">
+              <h1 className="display device-title">Give this piece to {screen.envs[screen.at]!.guardian}</h1>
+              <p className="device-sub">
+                Piece {screen.at + 1} of {screen.envs.length}. It is sealed to {screen.envs[screen.at]!.guardian} alone and opens nothing by itself.
+                Any {screen.envs[0]!.threshold} guardians together can rebuild this Home Key.
+              </p>
+            </div>
+            <AnimatedQr key={screen.at} frames={encodeFrames(screen.envs[screen.at]!)} color="#3F2E0B" label={`Sealed piece for ${screen.envs[screen.at]!.guardian}`} />
+            {screen.at + 1 < screen.envs.length ? (
+              <button type="button" className="btn btn-brass btn-block" onClick={() => setScreen({ ...screen, at: screen.at + 1 })}>
+                Next guardian
+              </button>
+            ) : (
+              <button type="button" className="btn btn-brass btn-block" onClick={() => setScreen({ name: "ready" })}>
+                All guardians have their piece
+              </button>
+            )}
+          </section>
+        )}
+
         {screen.name === "refused" && (
           <section className="stack">
             <div className="notice notice-bad">
@@ -223,7 +280,7 @@ export function HomeKey() {
   );
 }
 
-function Setup({ onCreated }: { onCreated: (address: string, code: string) => void }) {
+function Setup({ onCreated, onRestore }: { onCreated: (address: string, code: string) => void; onRestore: () => void }) {
   const [address, setAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
   return (
@@ -253,6 +310,106 @@ function Setup({ onCreated }: { onCreated: (address: string, code: string) => vo
           Create Home Key
         </button>
       </form>
+      <button type="button" className="btn btn-ghost" onClick={onRestore}>
+        Lost your Home Key? Restore it with your guardians
+      </button>
+    </section>
+  );
+}
+
+function Restore({ onRestored, onCancel }: { onRestored: (address: string, code: string) => void; onCancel: () => void }) {
+  const [address, setAddress] = useState("");
+  const [shares, setShares] = useState<GuardianShare[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const ok = address.trim().startsWith("qor1") && isValidBech32(address.trim());
+  const need = shares[0]?.threshold ?? 2;
+
+  const onShare = (m: unknown) => {
+    setError(null);
+    if (!isGuardianShare(m)) return setError("That is not a guardian piece.");
+    if (m.account !== address.trim()) return setError("That piece belongs to a different account.");
+    const next = shares.some((s) => s.index === m.index) ? shares : [...shares, m];
+    setShares(next);
+    if (next.length >= m.threshold) {
+      try {
+        onRestored(address.trim(), recoverHomeKey(next, address.trim()));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "The pieces do not fit together.");
+      }
+    }
+  };
+
+  return (
+    <section className="stack">
+      <div className="stack-tight">
+        <h1 className="display device-title">Restore your Home Key</h1>
+        <p className="device-sub">Meet your guardians in person. Each one opens their piece and shows it to this device.</p>
+      </div>
+      <div className="field">
+        <label htmlFor="raddr">Your Pocket's address</label>
+        <input id="raddr" className="input input-home" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="qor1…" autoComplete="off" spellCheck={false} disabled={shares.length > 0} />
+      </div>
+      {ok && (
+        <>
+          <p className="small home-note" role="status">
+            {shares.length === 0 ? `Pieces needed: ${need}` : `Got ${shares.length} of ${need} pieces`}
+          </p>
+          <FrameReader key={shares.length} tone="home" onMessage={onShare} />
+        </>
+      )}
+      {error && <p className="small" style={{ color: "var(--refused)", margin: 0 }}>{error}</p>}
+      <button type="button" className="btn btn-ghost" onClick={onCancel}>
+        Cancel
+      </button>
+    </section>
+  );
+}
+
+function GuardiansCollect({
+  cards,
+  onCard,
+  onSeal,
+  onCancel,
+}: {
+  cards: GuardianCard[];
+  onCard: (c: GuardianCard) => void;
+  onSeal: () => void;
+  onCancel: () => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <section className="stack">
+      <div className="stack-tight">
+        <h1 className="display device-title">Choose your guardians</h1>
+        <p className="device-sub">
+          Three people you trust and can meet. Each gets one sealed piece of this Home Key. Two of them together can help you rebuild it.
+          Your 24 words are not involved.
+        </p>
+      </div>
+      {cards.length > 0 && (
+        <ol className="guardian-list">
+          {cards.map((c) => (
+            <li key={c.mlkemPublicKey}>{c.name}</li>
+          ))}
+        </ol>
+      )}
+      <p className="small home-note">Ask each guardian to open Seedproof Guardian and show you their card.</p>
+      <FrameReader
+        key={cards.length}
+        tone="home"
+        onMessage={(m) => {
+          setError(null);
+          if (!isGuardianCard(m)) return setError("That is not a guardian card.");
+          onCard(m);
+        }}
+      />
+      {error && <p className="small" style={{ color: "var(--refused)", margin: 0 }}>{error}</p>}
+      <button type="button" className="btn btn-brass btn-block" disabled={cards.length < 2} onClick={onSeal}>
+        {cards.length < 2 ? "Add at least 2 guardians" : `Seal ${cards.length} pieces`}
+      </button>
+      <button type="button" className="btn btn-ghost" onClick={onCancel}>
+        Cancel
+      </button>
     </section>
   );
 }
@@ -351,7 +508,7 @@ function Unlock({ onUnlocked, onReset }: { onUnlocked: (s: Stored) => void; onRe
   );
 }
 
-function Ready({ pq, onRequest }: { pq: PqcKeypair; onRequest: (msg: unknown) => void }) {
+function Ready({ pq, onRequest, onGuardians }: { pq: PqcKeypair; onRequest: (msg: unknown) => void; onGuardians: () => void }) {
   return (
     <section className="stack">
       <div className="stack-tight">
@@ -359,6 +516,9 @@ function Ready({ pq, onRequest }: { pq: PqcKeypair; onRequest: (msg: unknown) =>
         <p className="device-sub">Nothing is signed until you have read it here and approved it.</p>
       </div>
       <FrameReader tone="home" onMessage={onRequest} />
+      <button type="button" className="btn btn-brass-outline btn-block" onClick={onGuardians}>
+        Set up guardians
+      </button>
       <p className="tiny home-note">Key fingerprint {fingerprint(pq)}. This device holds no recovery phrase.</p>
     </section>
   );
