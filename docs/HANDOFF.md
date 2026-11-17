@@ -1,13 +1,13 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 19:25 UTC. Kept current as work lands; the change log is at the end._
+_Last updated: 17 Nov 2026, 19:40 UTC. Kept current as work lands; the change log is at the end._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
 - Hackathon: Build Before Q-Day, the QoreChain Developer Fest (https://build.qorechain.io). Category: **Post-Quantum dApp**.
 - Final deadline: **2 Dec 2026, 23:59 UTC**. Checks run 3 to 5 Dec, winners on 16 Dec.
 - Owner: Investorquab (GitHub). Repo: https://github.com/Investorquab/Seedproof (MIT).
-- Other docs: [PLAN.md](PLAN.md) (strategy, pitch, judge Q&A), [TESTNET.md](TESTNET.md) (every on-chain result with tx hashes), [design/](design/) (approved mockups), [../AI_USAGE.md](../AI_USAGE.md) (AI work log, required for the AI-native award).
+- Other docs: [THREAT_MODEL.md](THREAT_MODEL.md) (each attacker and what stops them), [PLAN.md](PLAN.md) (strategy, pitch, judge Q&A), [TESTNET.md](TESTNET.md) (every on-chain result with tx hashes), [design/](design/) (approved mockups), [../AI_USAGE.md](../AI_USAGE.md) (AI work log, required for the AI-native award).
 
 ---
 
@@ -157,13 +157,15 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 ## 8. What is left, in priority order
 
 1. **Drill**: registered. Keep no EVM window open on the Pocket during 18 Nov; proof tx on 18 Nov; owner submits the hash by 19 Nov 23:59 UTC.
-2. **docs/THREAT_MODEL.md**: one table, each case (seed stolen, classical key stolen, Home Key stolen, Home Key lost, phone lost, wrench attack, malicious relay, guardian collusion) with what the attacker gets and what stops them.
-3. **Pocket vault screen**: balances, top-up (instant), withdraw (queued, countdown), cancel; uses `VaultRequest` + Home Key round trip; vault address from `contracts/deployments/diana.json`; gas from `estimateGas`.
-4. **Steal This Seed**: give the steal account a Home Key and its own vault, fund pocket and vault, put its real 24 words in `apps/web/src/config.ts` (set `isSample: false`), and add a counter of attempts and value kept.
-5. **Contracts quality**: fuzz and invariant tests, reach 100+, Slither report, QCAI audit stage 1 and 2 (owner runs these from the Dashboard), `docs/audit/` + `docs/AUDIT.md`.
-6. **Hosting**: deploy `apps/web` (Vercel or similar); the bundle is 3.2 MB, so code-split the routes.
-7. **Submission**: README final (add live addresses and TESTNET results), cover image 16:9 at least 1200x675, 3-minute video (script in PLAN.md section 7), project page Description and How it's made, every testnet address listed, Declared vs Verified all green.
+2. **Pocket vault screen**: balances, top-up (instant), withdraw (queued, countdown), cancel; uses `VaultRequest` + Home Key round trip; vault address from `contracts/deployments/diana.json`; gas from `estimateGas`.
+3. **Steal This Seed**: give the steal account a Home Key and its own vault, fund pocket and vault, put its real 24 words in `apps/web/src/config.ts` (set `isSample: false`), and add a counter of attempts and value kept.
+4. **Contracts quality**: fuzz and invariant tests, reach 100+, Slither report, QCAI audit stage 1 and 2 (owner runs these from the Dashboard), `docs/audit/` + `docs/AUDIT.md`.
+5. **Hosting**: deploy `apps/web` (Vercel or similar); the bundle is 3.2 MB, so code-split the routes.
+6. **Submission**: README final (add live addresses and TESTNET results), cover image 16:9 at least 1200x675, 3-minute video (script in PLAN.md section 7), project page Description and How it's made, every testnet address listed, Declared vs Verified all green.
 9. Build in public daily on the project page and X (#BuildBeforeQDay).
+
+---
+7. **Vault hardening found by the threat model**: restrict top-ups to the registered Pocket address (a stolen Home Key alone can currently send one day's cap anywhere), and look at the stolen-Home-Key race during rotation (THREAT_MODEL.md case 3).
 
 ---
 
@@ -203,3 +205,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 | 17 Nov 19:08 | Project created on the site. Funder registered a QoreSeal key and swapped in pool 2 (badges). Home Key decoder now reads `MsgRegisterKEMKey` and `MsgSwapExactIn` |
 | 17 Nov 19:10 | Owner registered the drill (Pocket + vault) and earned all four Ship Weeks badges. GitHub App not compulsory but recommended (commit count shows on the project card) |
 | 17 Nov 19:25 | Vault withdrawal id 0 executed after its delay (full queue, wait, execute cycle on chain). Fixed a broken import in `window.ts`. Pocket has no live window going into the drill |
+| 17 Nov 19:40 | THREAT_MODEL.md written (9 attacker cases). It surfaced two vault hardening items, now on the to-do list |
