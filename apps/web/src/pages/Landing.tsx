@@ -1,6 +1,8 @@
+import { Suspense, lazy } from "react";
 import { Link } from "react-router-dom";
 import { Logo } from "../components/Logo";
-import { ExposureCheck } from "./ExposureCheck";
+// The check needs the SDK (key derivation); load it after the page itself.
+const ExposureCheck = lazy(() => import("./ExposureCheck").then((m) => ({ default: m.ExposureCheck })));
 import { REPO_URL, STEAL_THIS_SEED, shortAddress } from "../config";
 import "./landing.css";
 
@@ -162,7 +164,9 @@ export function Landing() {
         </section>
 
         <section id="check" className="block" aria-labelledby="check-title">
-          <ExposureCheck />
+          <Suspense fallback={<p className="small muted">Loading the check…</p>}>
+            <ExposureCheck />
+          </Suspense>
         </section>
       </main>
 

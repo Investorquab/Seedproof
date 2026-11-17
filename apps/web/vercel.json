@@ -1,7 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npm ci && npm --prefix ../../packages/core ci",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/qore-rest/:path*", "destination": "https://api-testnet.qore.host/:path*" },
-    { "source": "/((?!qore-rest|assets|favicon).*)", "destination": "/index.html" }
+    {
+      "source": "/qore-rest/:path*",
+      "destination": "https://api-testnet.qore.host/:path*"
+    },
+    {
+      "source": "/((?!qore-rest|assets|favicon).*)",
+      "destination": "/index.html"
+    }
   ]
 }

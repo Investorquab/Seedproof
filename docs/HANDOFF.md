@@ -1,6 +1,6 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 22:30 UTC. Kept current as work lands; the change log is at the end._
+_Last updated: 17 Nov 2026, 22:45 UTC. Kept current as work lands; the change log is at the end._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
@@ -85,6 +85,15 @@ git clone https://github.com/Investorquab/Seedproof.git && cd Seedproof
 ```
 
 The web app imports `packages/core/src` directly, so install `packages/core` before building the web app.
+
+**Hosting (Vercel):** import the GitHub repo in Vercel and set **Root Directory** to `apps/web`. Everything else comes from `apps/web/vercel.json`:
+- install: `npm ci && npm --prefix ../../packages/core ci`
+- build: `npm run build`, output `dist`
+- rewrites: `/qore-rest/*` goes to the testnet REST API (it has no CORS), and every other path falls back to `index.html` for the router
+
+Keep "Include files outside the root directory" on (Vercel's default), because the app imports `packages/core`. A clean clone was built with exactly these commands on 17 Nov.
+
+Bundle: the landing page loads 258 KB (82 KB gzip). The SDK and signing code (about 2.9 MB) load only when the exposure check or a device app opens.
 
 ---
 
@@ -220,3 +229,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 | 17 Nov 22:00 | Vault v2 in code: registered `pocket`, `SetPocket` (action 8), `topUp` pays only the pocket. 73 contract and 62 core tests pass; vectors regenerated; deploy script takes `POCKET`. Deploy is held until after the drill |
 | 17 Nov 22:08 | Steal This Seed account linked to its own Home Key (`steal-homekey.txt`); words still private |
 | 17 Nov 22:30 | Property tests (6 seeded runs by default; a 40 x 150 sweep passed) and Slither (8 findings triaged in `docs/audit/SLITHER.md`). Review found and fixed a no-code token address being treated as paid. 80 contract tests |
+| 17 Nov 22:45 | Routes and the exposure check load lazily (landing 3.3 MB to 258 KB); `vercel.json` carries install, build and rewrites; clean-clone build verified. Waiting on the owner to import the repo in Vercel |
