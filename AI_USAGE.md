@@ -26,3 +26,4 @@ Seedproof is built AI-native, with a human (Investorquab) directing and reviewin
 | 17 Nov 2026 | Vault v2: top-ups pay only a registered Pocket, `SetPocket` as a delayed action; tests, vectors, Home Key wording and deploy script updated; deploy held until after the drill | Approved continuing with the hardening |
 | 17 Nov 2026 | Seeded property tests for the vault, Slither run and triage, fix for no-code token addresses | Asked to keep building |
 | 17 Nov 2026 | Route-level code splitting, zero-config Vercel settings, clean-clone build check | Asked to keep building |
+| 17 Nov 2026 | Vault factory (contract, 5 tests, deploy), per-user vault lookup and "Create my vault" in the Pocket, broadcast waits for inclusion, Steal This Seed vault created through the app and funded | Asked to finish everything possible before handing off to Claude Code |

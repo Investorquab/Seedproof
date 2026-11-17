@@ -89,12 +89,21 @@ A classic account has no EVM key, so after linking there is no window to manage 
 
 ### Steal This Seed account
 
-`qor1xkefca25d5dfwwy9tfg9rfs8tujas7pssu0pnd` holds 20 QOR. Its 24 words will be published once the public page and counter are ready.
+`qor1xkefca25d5dfwwy9tfg9rfs8tujas7pssu0pnd` (0x `0x35b29C75546d1A9738855a5051a6075F25D87830`) holds about 20 QOR, and its vault `0xEaCf1C1Dd83F2C08c4e3a56a2839Ba31663ceE29` holds 50 fUSD and 3 QOR. Its 24 words will be published once the public page is ready.
 
 | Step | Result | Tx | Gas |
 |---|---|---|---|
 | Register the seed-derived key | code 0 | `8342347B…4EC847BC` | 299,270 |
 | Rotate to an independent Home Key | code 0 | `822C46B8…90F33F1A` | 455,155 |
+
+### Vault factory (vault v2) and the first user-created vault
+
+| Step | Result | Tx | Gas |
+|---|---|---|---|
+| Deploy `SeedproofVaultFactory` at `0xD583AC106f7c6faDAe8C6E18eCf3FBa4554eF238` (creates v2 vaults: top-ups pay only the registered Pocket) | success | `0x2e8acda2…c1fcb6fd` | 2,485,813 |
+| In the Pocket app (browser), Steal This Seed asks its Home Key for a 1-call window to the factory only | code 0, Home Key read "Open spending window: up to 1 transactions, 1.5 QOR, for 600 blocks, to 0xD583AC10...4eF238" | (native, in the account's history) | |
+| "Create my vault" in the app | vault `0xEaCf1C1Dd83F2C08c4e3a56a2839Ba31663ceE29`: pocket and Home Key hash match the account, 24 h delay | `0xa1004503…c3d6cea6` | |
+| Funder sends 50 fUSD and 3 QOR to it | success | `0x4f7842de…938a99d8`, `0x1c2c2700…7e0bcee0` | |
 
 ### Guardian encryption key and a pool swap
 

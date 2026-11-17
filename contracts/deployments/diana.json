@@ -14,5 +14,11 @@
     "0x97143B771D34ddb9130b807b135Ae675A5a963CA": "100000000",
     "0x02292293c13880a26242690eb70a0e42B8E91c28": "50000000000000000",
     "0x4604e7E45b2ecdbfbDc157103f5B2b62cb16451A": "200000"
+  },
+  "factory": {
+    "address": "0xD583AC106f7c6faDAe8C6E18eCf3FBa4554eF238",
+    "deployTx": "0x2e8acda2f9c8ff6687eaf5503e0cacc07ef3e557ea8629307bd06492c1fcb6fd",
+    "block": 10276120,
+    "vaultVersion": 2
   }
 }

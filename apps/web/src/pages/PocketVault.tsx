@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { decodeAbiParameters, parseUnits, type Hex } from "viem";
 import { ENVELOPE_VERSION, VaultAction, describeVaultRequest, formatUnits, vaultPayload, type VaultRequest, type VaultResponse } from "@seedproof/core";
-import { NETWORK, VAULT_ADDRESS, shortAddress } from "../config";
+import { NETWORK, shortAddress } from "../config";
 import { readVault, VAULT_TOKENS, type QueuedItem, type VaultState, type VaultToken } from "../lib/vault";
 import "./vault.css";
 
 interface Props {
+  /** This account's own vault (from the factory, or the v1 demo vault). */
+  vault: Hex;
   /** qor1 address of the account the Home Key protects. */
   account: string;
   /** The same account's 0x address: the Pocket on the EVM lane. */
@@ -52,11 +54,11 @@ export function PocketVault(props: Props) {
   const refresh = useCallback(async () => {
     setError(null);
     try {
-      setState(await readVault(props.pocket));
+      setState(await readVault(props.vault, props.pocket));
     } catch {
       setError("Could not read the vault from the QoreChain testnet.");
     }
-  }, [props.pocket]);
+  }, [props.vault, props.pocket]);
 
   useEffect(() => {
     refresh();
@@ -70,21 +72,21 @@ export function PocketVault(props: Props) {
   /** Build a vault request at the vault's current nonce, ready for the Home Key. */
   const request = useCallback(
     async (action: VaultAction, payload: Hex): Promise<VaultRequest> => {
-      const fresh = await readVault(props.pocket);
+      const fresh = await readVault(props.vault, props.pocket);
       return {
         v: ENVELOPE_VERSION,
         kind: "seedproof/vault-request",
         account: props.account,
         pocket: props.pocket,
         evmChainId: String(NETWORK.evmChainId),
-        vault: VAULT_ADDRESS,
+        vault: props.vault,
         nonce: fresh.nonce.toString(),
         action,
         payload,
         deadline: Math.floor(Date.now() / 1000) + 900,
       };
     },
-    [props.account, props.pocket],
+    [props.account, props.pocket, props.vault],
   );
 
   const ask = async (action: VaultAction, payload: Hex, call: (req: VaultRequest, res: VaultResponse) => Promise<{ txhash: string; code: number; rawLog: string }>) => {
@@ -122,7 +124,7 @@ export function PocketVault(props: Props) {
         <button type="button" className="btn btn-ghost small" onClick={props.onBack}>
           Back to Pocket
         </button>
-        <span className="small muted">{shortAddress(VAULT_ADDRESS)}</span>
+        <span className="small muted">{shortAddress(props.vault)}</span>
       </div>
 
       {error && (

@@ -34,11 +34,11 @@ import { AnimatedQr } from "../components/AnimatedQr";
 import { FrameReader } from "../components/FrameReader";
 import { hasSealed, seal, unseal, forget } from "../lib/sealed";
 import { accountInfo, broadcast, explorerTx, nativeBalance, registeredPqcKey, type BroadcastOutcome } from "../lib/chain";
-import { FEST_TOKENS, NETWORK, VAULT_ADDRESS, shortAddress } from "../config";
+import { FEST_TOKENS, NETWORK, VAULT_FACTORY, shortAddress } from "../config";
 import "./device.css";
 import "./pocket.css";
 import { PocketVault } from "./PocketVault";
-import { isOwnVault, readVault, sendVaultCall } from "../lib/vault";
+import { createVault, findVault, readVault, sendVaultCall, type FoundVault } from "../lib/vault";
 import { formatUnits } from "@seedproof/core";
 
 const STORE = "seedproof.pocket.v1";
@@ -263,6 +263,15 @@ function PocketHome({ wallet, onSwitch }: { wallet: Wallet; onSwitch: () => void
   const [flow, setFlow] = useState<Flow>({ name: "home" });
   const [protection, setProtection] = useState<Protection>("checking");
   const [registered, setRegistered] = useState<Uint8Array | null>(null);
+  /** undefined while looking, null when this account has no vault yet. */
+  const [vault, setVault] = useState<FoundVault | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (wallet.kind !== "evm" || !wallet.evm || protection !== "home") return;
+    findVault(wallet.evm, registered)
+      .then(setVault)
+      .catch(() => setVault(undefined));
+  }, [wallet.kind, wallet.evm, protection, registered]);
 
   const refresh = useCallback(async () => {
     setLoadError(null);
@@ -372,12 +381,15 @@ function PocketHome({ wallet, onSwitch }: { wallet: Wallet; onSwitch: () => void
         : FEST_TOKENS.filter((t) => win.targets.includes(t.address.toLowerCase())).map((t) => `all your ${t.symbol}`)
       : [];
 
-  const vaultWindowOpen = Boolean(win?.live && win.targets.includes(VAULT_ADDRESS.toLowerCase()));
+  const windowFor = (target: string) => Boolean(win?.live && win.targets.includes(target.toLowerCase()));
+  const vaultWindowOpen = vault ? windowFor(vault.address) : false;
 
-  if (flow.name === "vault" && wallet.evm && wallet.evmKey) {
+  if (flow.name === "vault" && wallet.evm && wallet.evmKey && vault) {
     const evmKey = wallet.evmKey;
+    const vaultAddress = vault.address;
     return (
       <PocketVault
+        vault={vaultAddress}
         account={wallet.address}
         pocket={wallet.evm}
         vaultWindowOpen={vaultWindowOpen}
@@ -385,7 +397,7 @@ function PocketHome({ wallet, onSwitch }: { wallet: Wallet; onSwitch: () => void
         onOpenWindow={() =>
           ask([
             // About an hour, a few calls, fees only, and only the vault.
-            openEvmWindowMsg({ sender: wallet.address, blocks: 1_800, maxTxs: 5, maxValue: "1500000", allowedTargets: [VAULT_ADDRESS] }),
+            openEvmWindowMsg({ sender: wallet.address, blocks: 1_800, maxTxs: 5, maxValue: "1500000", allowedTargets: [vaultAddress] }),
           ])
         }
         onAsk={(req, summary, submit) =>
@@ -399,7 +411,7 @@ function PocketHome({ wallet, onSwitch }: { wallet: Wallet; onSwitch: () => void
             },
           })
         }
-        onSend={(fn, args) => sendVaultCall(evmKey, fn, args)}
+        onSend={(fn, args) => sendVaultCall(evmKey, vaultAddress, fn, args)}
         onDone={(outcome, summary) => {
           setFlow({ name: "done", outcome, summary });
           refresh();
@@ -519,7 +531,22 @@ function PocketHome({ wallet, onSwitch }: { wallet: Wallet; onSwitch: () => void
       </p>
 
       {wallet.kind === "evm" && wallet.evm && protection === "home" && (
-        <VaultTeaser pocket={wallet.evm} registered={registered} onOpen={() => setFlow({ name: "vault" })} />
+        <VaultTeaser
+          pocket={wallet.evm}
+          vault={vault}
+          factoryWindowOpen={windowFor(VAULT_FACTORY)}
+          onOpen={() => setFlow({ name: "vault" })}
+          onOpenFactoryWindow={() =>
+            // One call, to the factory only, with room for its fee.
+            ask([openEvmWindowMsg({ sender: wallet.address, blocks: 600, maxTxs: 1, maxValue: "1500000", allowedTargets: [VAULT_FACTORY] })])
+          }
+          onCreate={async () => {
+            const outcome = await createVault(wallet.evmKey!, registered!);
+            setFlow({ name: "done", outcome, summary: outcome.vault ? `Created your vault at ${shortAddress(outcome.vault)}` : "Create your vault" });
+            refresh();
+            if (wallet.evm) findVault(wallet.evm, registered).then(setVault).catch(() => {});
+          }}
+        />
       )}
 
       {loadError && (
@@ -556,7 +583,7 @@ function PocketHome({ wallet, onSwitch }: { wallet: Wallet; onSwitch: () => void
                 maxTxs,
                 maxValue: uqor,
                 // Never an open-to-anything window: it would expose every token on the account.
-                ...(scope === "qor" ? { nativeOnly: true } : { allowedTargets: [scope === "vault" ? VAULT_ADDRESS : scope] }),
+                ...(scope === "qor" ? { nativeOnly: true } : { allowedTargets: [scope === "vault" ? (vault?.address ?? VAULT_FACTORY) : scope] }),
               }),
             ])
           }
@@ -566,27 +593,73 @@ function PocketHome({ wallet, onSwitch }: { wallet: Wallet; onSwitch: () => void
   );
 }
 
-function VaultTeaser({ pocket, registered, onOpen }: { pocket: `0x${string}`; registered: Uint8Array | null; onOpen: () => void }) {
+function VaultTeaser({
+  pocket,
+  vault,
+  factoryWindowOpen,
+  onOpen,
+  onOpenFactoryWindow,
+  onCreate,
+}: {
+  pocket: `0x${string}`;
+  vault: FoundVault | null | undefined;
+  factoryWindowOpen: boolean;
+  onOpen: () => void;
+  onOpenFactoryWindow: () => void;
+  onCreate: () => Promise<void>;
+}) {
   const [fusd, setFusd] = useState<bigint | null>(null);
-  const [own, setOwn] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
-    isOwnVault(registered)
-      .then(async (yes) => {
-        setOwn(yes);
-        if (yes) setFusd((await readVault(pocket)).balances[FEST_TOKENS[0].address] ?? 0n);
-      })
-      .catch(() => setOwn(null));
-  }, [pocket, registered]);
-  if (own === false) {
+    if (!vault?.trustsThisHomeKey) return;
+    readVault(vault.address, pocket)
+      .then((v) => setFusd(v.balances[FEST_TOKENS[0].address] ?? 0n))
+      .catch(() => setFusd(null));
+  }, [vault, pocket]);
+
+  if (vault === undefined) return null;
+
+  if (vault === null) {
     return (
       <section aria-label="Vault" className="vault-teaser">
         <span className="small vault-soft">No vault yet</span>
         <p className="vault-note">
-          A vault is your own contract, bound to your Home Key. This testnet build is wired to one demo vault, and it trusts a different Home Key.
+          Your vault is your own contract. Top-ups only ever pay this phone, and everything else waits 24 hours and needs your Home Key.
         </p>
+        {factoryWindowOpen ? (
+          <button
+            type="button"
+            className="btn vault-btn-solid btn-block"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await onCreate();
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? "Creating…" : "Create my vault"}
+          </button>
+        ) : (
+          <button type="button" className="btn vault-btn-solid btn-block" onClick={onOpenFactoryWindow}>
+            Ask Home Key to create it
+          </button>
+        )}
       </section>
     );
   }
+
+  if (!vault.trustsThisHomeKey) {
+    return (
+      <section aria-label="Vault" className="vault-teaser">
+        <span className="small vault-soft">Vault needs attention</span>
+        <p className="vault-note">Your vault trusts a different Home Key than the one this account uses now. Rotate the vault's Home Key before using it.</p>
+      </section>
+    );
+  }
+
   return (
     <section aria-label="Vault" className="vault-teaser">
       <div className="vault-row">

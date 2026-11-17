@@ -47,7 +47,19 @@ export async function broadcast(txBytes: Uint8Array): Promise<BroadcastOutcome> 
   });
   const json = await res.json();
   const r = json.tx_response ?? {};
-  return { txhash: r.txhash ?? "", code: Number(r.code ?? -1), rawLog: r.raw_log ?? JSON.stringify(json) };
+  const sent: BroadcastOutcome = { txhash: r.txhash ?? "", code: Number(r.code ?? -1), rawLog: r.raw_log ?? JSON.stringify(json) };
+  if (sent.code !== 0 || !sent.txhash) return sent;
+  // Accepted into the mempool is not done: wait for the block, so the result (and what the
+  // page reads next) reflects the transaction having run.
+  for (let i = 0; i < 30; i++) {
+    await new Promise((ok) => setTimeout(ok, 2000));
+    const q = await fetch(`${NETWORK.rest}/cosmos/tx/v1beta1/txs/${sent.txhash}`).catch(() => null);
+    if (q?.ok) {
+      const t = (await q.json()).tx_response;
+      if (t) return { txhash: sent.txhash, code: Number(t.code ?? 0), rawLog: t.raw_log ?? "" };
+    }
+  }
+  return { ...sent, rawLog: "Sent, but not seen in a block after a minute. Check the explorer." };
 }
 
 export const explorerTx = (hash: string) => `${NETWORK.explorer}/tx/${hash}`;

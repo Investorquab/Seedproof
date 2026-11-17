@@ -33,8 +33,14 @@ export const STEAL_THIS_SEED = {
 
 export const shortAddress = (a: string) => (a.length > 16 ? `${a.slice(0, 7)}…${a.slice(-4)}` : a);
 
-/** The live demo vault on qorechain-diana (contracts/deployments/diana.json). */
-export const VAULT_ADDRESS = "0xadB21AAC72079Ce455a0b09ee56f069bf5E4f27C";
+/**
+ * The first demo vault (v1, before the factory) on qorechain-diana. Kept because it is the
+ * Q-Day Drill contract; v1 has no registered Pocket. contracts/deployments/diana.json.
+ */
+export const VAULT_ADDRESS = "0xadB21AAC72079Ce455a0b09ee56f069bf5E4f27C" as const;
+
+/** SeedproofVaultFactory: one v2 vault per Pocket (vaultOf(pocket)). */
+export const VAULT_FACTORY = "0xD583AC106f7c6faDAe8C6E18eCf3FBa4554eF238" as const;
 
 /** Fest test tokens (ERC-20 side). */
 export const FEST_TOKENS = [
