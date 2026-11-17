@@ -87,6 +87,15 @@ Account `qor1eu6r8hjehspjx0z3m9s9vf04keundh8wsg8gzs`, script `s9-qorex.ts`.
 
 A classic account has no EVM key, so after linking there is no window to manage and nothing on it moves without the Home Key.
 
+### Steal This Seed account
+
+`qor1xkefca25d5dfwwy9tfg9rfs8tujas7pssu0pnd` holds 20 QOR. Its 24 words will be published once the public page and counter are ready.
+
+| Step | Result | Tx | Gas |
+|---|---|---|---|
+| Register the seed-derived key | code 0 | `8342347B…4EC847BC` | 299,270 |
+| Rotate to an independent Home Key | code 0 | `822C46B8…90F33F1A` | 455,155 |
+
 ### Guardian encryption key and a pool swap
 
 | Step | Result | Tx | Gas |
