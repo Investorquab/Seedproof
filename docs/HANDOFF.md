@@ -1,6 +1,6 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 19:08 UTC. Kept current as work lands; the change log is at the end._
+_Last updated: 17 Nov 2026, 19:10 UTC. Kept current as work lands; the change log is at the end._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
@@ -34,8 +34,8 @@ How the split works: the chain's PQ signature covers the tx body *without* the P
 | Vault contract (`contracts`) | Done and **deployed on testnet**. 67 Hardhat tests with real ML-DSA-87 signatures. Not yet: fuzz/invariant tests, Slither, 100+ test target, QCAI audits |
 | On-chain proof | **Done**. R1 to R5 all passed on qorechain-diana; seven thief attempts refused. See TESTNET.md |
 | Web app (`apps/web`) | Landing page with live exposure check, Pocket, Home Key, Guardian pages. Built from approved mockups. Not yet: vault screen in Pocket, hosting, end-to-end run against the live chain through the UI |
-| Q-Day Drill | Proof script ready (`s6-drill-proof.ts`). Account registration on the project page is the owner's job (section 7) |
-| Project page | Created 17 Nov: 3 of 3 SDKs verified; on chain verified: EVM window, hybrid txs, PQC registration with PoP, test tokens. Badges: hybrid tx, PQC contract; QoreSeal key and swap done on chain (press Check). Commits count only after the GitHub App is installed |
+| Q-Day Drill | **Registered** on the project page (17 Nov): Pocket account + vault contract. Proof script ready (`s6-drill-proof.ts`), to run on 18 Nov UTC; hash due on the project page by 19 Nov 23:59 UTC |
+| Project page | Created 17 Nov; all four Ship Weeks badges earned: 3 of 3 SDKs verified; on chain verified: EVM window, hybrid txs, PQC registration with PoP, test tokens. Badges: hybrid tx, PQC contract; QoreSeal key and swap done on chain (press Check). Commits count only after the GitHub App is installed |
 | Submission package | Not started: final README, video, cover image, project page text, QCAI audits, threat model |
 
 ---
@@ -155,7 +155,7 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 
 ## 8. What is left, in priority order
 
-1. **Drill**: register (owner, by 17 Nov 23:59 UTC); proof tx on 18 Nov; submit hash by 19 Nov.
+1. **Drill**: registered. Keep no EVM window open on the Pocket during 18 Nov; proof tx on 18 Nov; owner submits the hash by 19 Nov 23:59 UTC.
 2. **Execute queued withdrawal id 0** (open a 1-tx vault-only window with the Home Key, call `execute(0)` with estimated gas) and add the hash to TESTNET.md.
 3. **docs/THREAT_MODEL.md**: one table, each case (seed stolen, classical key stolen, Home Key stolen, Home Key lost, phone lost, wrench attack, malicious relay, guardian collusion) with what the attacker gets and what stops them.
 4. **Pocket vault screen**: balances, top-up (instant), withdraw (queued, countdown), cancel; uses `VaultRequest` + Home Key round trip; vault address from `contracts/deployments/diana.json`; gas from `estimateGas`.
@@ -201,3 +201,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 | 17 Nov 18:36 | Key files sent to the owner; drill account choice explained (register the Pocket, not the personal QoreX wallet) |
 | 17 Nov 18:46 | Owner had not created the project page yet; gave the New project fields (description, how it's made, 4 testnet addresses, kits) and drill registration steps. Ship Weeks badge: paste vault deploy tx `0x5f6e3db2…7b63e10` |
 | 17 Nov 19:08 | Project created on the site. Funder registered a QoreSeal key and swapped in pool 2 (badges). Home Key decoder now reads `MsgRegisterKEMKey` and `MsgSwapExactIn` |
+| 17 Nov 19:10 | Owner registered the drill (Pocket + vault) and earned all four Ship Weeks badges. GitHub App not compulsory but recommended (commit count shows on the project card) |
