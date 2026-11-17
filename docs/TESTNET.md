@@ -56,6 +56,13 @@ After the rotation, the account's registered key equals the Home Key and not the
 | Second top-up of 60 fUSD (cap 100, 50 used) | reverts `OverDailyLimit(50000000)` | none |
 | Queue a 100 fUSD withdrawal (1 hour delay) | success, id 0 | `0x1941e6e4…89d270f2` |
 
+### Guardian encryption key and a pool swap
+
+| Step | Result | Tx | Gas |
+|---|---|---|---|
+| Funder (the vault's guardian) publishes its QoreSeal ML-KEM-1024 key (`MsgRegisterKEMKey`) | code 0, key readable at `/qorechain/pqc/v1/kem/{addr}` | `83B92D77…8306D9EB` | 269,557 |
+| Funder swaps 1 QOR for fUSD in AMM pool 2 | code 0 | `B2AE1013…EFBB7BADA5` | 267,312 |
+
 ### pqcVerify precompile on its own
 
 A direct `eth_call` with a fresh ML-DSA-87 key: valid signature returns `true`, the same signature with one bit flipped returns `false`. Whole call: 312,170 gas (most of it is calldata for the 2,592-byte key and 4,627-byte signature).

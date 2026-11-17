@@ -106,6 +106,32 @@ export function decodeRequestBody(req: Pick<ApprovalRequest, "bodyB0"> & Partial
         });
         break;
       }
+      case "/qorechain.pqc.v1.MsgRegisterKEMKey": {
+        lines.push({
+          typeUrl: any.typeUrl,
+          text: "Publish an encryption key so others can seal messages to this account (replaces any earlier one)",
+          risk: "low",
+        });
+        break;
+      }
+      case "/qorechain.amm.v1.MsgSwapExactIn": {
+        const m = qorechainTypes.amm.MsgSwapExactIn.decode(any.value);
+        const label = (denom: string, amount?: string) => {
+          const t = denom.startsWith("erc20:") ? KNOWN_TOKENS[denom.slice(6)] : undefined;
+          if (t) return amount === undefined ? t.symbol : `${formatUnits(BigInt(amount), t.decimals)} ${t.symbol}`;
+          if (denom === "uqor") return amount === undefined ? "QOR" : formatCoin(amount, denom);
+          return null;
+        };
+        const inText = m.tokenIn ? label(m.tokenIn.denom, m.tokenIn.amount) : null;
+        const outText = label(m.denomOut);
+        if (!inText || !outText) understood = false;
+        lines.push({
+          typeUrl: any.typeUrl,
+          text: `Swap ${inText ?? "an unknown token"} for at least ${m.minOut} base units of ${outText ?? m.denomOut} (pool ${m.poolId})`,
+          risk: "high",
+        });
+        break;
+      }
       default: {
         understood = false;
         lines.push({

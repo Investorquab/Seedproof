@@ -1,6 +1,6 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 18:46 UTC. Kept current as work lands; the change log is at the end._
+_Last updated: 17 Nov 2026, 19:08 UTC. Kept current as work lands; the change log is at the end._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
@@ -35,6 +35,7 @@ How the split works: the chain's PQ signature covers the tx body *without* the P
 | On-chain proof | **Done**. R1 to R5 all passed on qorechain-diana; seven thief attempts refused. See TESTNET.md |
 | Web app (`apps/web`) | Landing page with live exposure check, Pocket, Home Key, Guardian pages. Built from approved mockups. Not yet: vault screen in Pocket, hosting, end-to-end run against the live chain through the UI |
 | Q-Day Drill | Proof script ready (`s6-drill-proof.ts`). Account registration on the project page is the owner's job (section 7) |
+| Project page | Created 17 Nov: 3 of 3 SDKs verified; on chain verified: EVM window, hybrid txs, PQC registration with PoP, test tokens. Badges: hybrid tx, PQC contract; QoreSeal key and swap done on chain (press Check). Commits count only after the GitHub App is installed |
 | Submission package | Not started: final README, video, cover image, project page text, QCAI audits, threat model |
 
 ---
@@ -105,6 +106,7 @@ Keys are **not** in git. They live in a local folder that `packages/core/scripts
 
 - `.keys/accounts.json`: mnemonic and private key for `funder`, `pocket`, `steal`
 - `.keys/pocket-homekey.txt`: the Pocket's Home Key recovery code (QRC1). **Whoever holds this controls the vault and the Pocket's native lane.** Without it, the vault funds are stuck until guardians are set up.
+- `.keys/funder-seal-seed.hex`: seed of the funder's QoreSeal keys (guardian 1)
 - `.keys/deploy.env`: `PRIVATE_KEY`, `HOME_KEY_PUBKEY`, `GUARDIANS` for `contracts/scripts/deploy.ts`
 
 A copy of all three files was sent to the owner on 17 Nov 2026 (`seedproof-keys.zip`). The owner must pass these to the next person privately (password manager or encrypted file), never through the repo, an issue, or chat. If they are lost, run `s0-accounts.ts` for new accounts and redeploy; the old testnet funds are then gone.
@@ -122,6 +124,7 @@ A copy of all three files was sent to the owner on 17 Nov 2026 (`seedproof-keys.
 | `s4-fund-vault.ts` | Send tokens and QOR to the vault (needs a funder window) |
 | `s5-pocket.ts` | Home Key window scoped to the vault, real top-up, thief attempts, over-cap check, queue a withdrawal |
 | `s6-drill-proof.ts` | Q-Day Drill proof: Home Key signed self-send from the pocket |
+| `s7-badges.ts` | Funder publishes a QoreSeal key (seed in `.keys/funder-seal-seed.hex`) and swaps in pool 2 (Ship Weeks badges) |
 
 ---
 
@@ -197,3 +200,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 | 17 Nov 18:30 | Handoff written: status, runbook, chain lessons, drill plan, remaining work |
 | 17 Nov 18:36 | Key files sent to the owner; drill account choice explained (register the Pocket, not the personal QoreX wallet) |
 | 17 Nov 18:46 | Owner had not created the project page yet; gave the New project fields (description, how it's made, 4 testnet addresses, kits) and drill registration steps. Ship Weeks badge: paste vault deploy tx `0x5f6e3db2…7b63e10` |
+| 17 Nov 19:08 | Project created on the site. Funder registered a QoreSeal key and swapped in pool 2 (badges). Home Key decoder now reads `MsgRegisterKEMKey` and `MsgSwapExactIn` |
