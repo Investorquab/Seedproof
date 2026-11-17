@@ -1,6 +1,6 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 20:55 UTC. Kept current as work lands; the change log is at the end._
+_Last updated: 17 Nov 2026, 21:35 UTC. Kept current as work lands; the change log is at the end._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
@@ -33,7 +33,7 @@ How the split works: the chain's PQ signature covers the tx body *without* the P
 | Core protocol (`packages/core`) | Done. 60 tests. Split signing for both `eth_secp256k1` (unified, QoreX-style) and Cosmos `secp256k1` accounts; clear-signing decoder; exposure check; Home Key linking; vault requests; animated-QR frames; Shamir; guardians; `MsgConvertCoin` |
 | Vault contract (`contracts`) | Done and **deployed on testnet**. 67 Hardhat tests with real ML-DSA-87 signatures. Not yet: fuzz/invariant tests, Slither, 100+ test target, QCAI audits |
 | On-chain proof | **Done**. R1 to R5 all passed on qorechain-diana; seven thief attempts refused. See TESTNET.md |
-| Web app (`apps/web`) | Landing page with live exposure check, Pocket, Home Key, Guardian pages. Built from approved mockups. Pocket opens QoreX (classic) and 0x accounts and only opens scoped windows; checked in headless Chrome against the live chain through the REST proxy. Not yet: vault screen in Pocket, hosting, end-to-end run against the live chain through the UI |
+| Web app (`apps/web`) | Landing page with live exposure check, Pocket, Home Key, Guardian pages. Built from approved mockups. Pocket opens QoreX (classic) and 0x accounts and only opens scoped windows. **Vault screen built** (`PocketVault.tsx`, `lib/vault.ts`): balances, today's top-up left, top up, withdraw with countdown, cancel, finish when ready, guardians line; shown only when the vault trusts this account's registered Home Key. Top-up, withdraw and cancel checked end to end in headless Chrome on the live chain (TESTNET.md). Not yet: hosting; a way for each user to deploy their own vault from the app (today `config.ts` points at the one demo vault) |
 | Q-Day Drill | **Registered** on the project page (17 Nov): Pocket account + vault contract. Proof script ready (`s6-drill-proof.ts`), to run on 18 Nov UTC; hash due on the project page by 19 Nov 23:59 UTC |
 | Project page | Created 17 Nov; all four Ship Weeks badges earned: 3 of 3 SDKs verified; on chain verified: EVM window, hybrid txs, PQC registration with PoP, test tokens. Badges: hybrid tx, PQC contract; QoreSeal key and swap done on chain (press Check). Commits count only after the GitHub App is installed |
 | Submission package | Not started: final README, video, cover image, project page text, QCAI audits, threat model |
@@ -45,7 +45,9 @@ How the split works: the chain's PQ signature covers the tx body *without* the P
 ```
 apps/web/                 Vite + React 19 app. Routes: /  /pocket  /home-key  /guardian
   src/pages/Landing.tsx     landing page + ExposureCheck
-  src/pages/Pocket.tsx      phone: sealed mnemonic, protection status, send, windows, link Home Key
+  src/pages/Pocket.tsx      phone: sealed mnemonic, account kind, protection status, send, scoped windows, link Home Key
+  src/pages/PocketVault.tsx the vault screen (0x accounts whose Home Key the vault trusts)
+  src/lib/vault.ts          vault reads and calls over the EVM RPC (CORS is allowed there)
   src/pages/HomeKey.tsx     second device: setup (QRC1 code), review + sign, guardians setup, restore
   src/pages/Guardian.tsx    guardian: seal keys, open a share in person
   src/components/           AnimatedQr, FrameReader (camera or paste), Logo
@@ -162,11 +164,11 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 ## 8. What is left, in priority order
 
 1. **Drill**: registered. Keep no EVM window open on the Pocket during 18 Nov; proof tx on 18 Nov; owner submits the hash by 19 Nov 23:59 UTC.
-2. **Pocket vault screen**: mockup `docs/design/PocketVault.dc.html` (also on the design canvas) **awaiting owner approval**; then build: balances, top-up (instant), withdraw (queued, countdown), cancel; uses `VaultRequest` + Home Key round trip; vault address from `contracts/deployments/diana.json`; gas from `estimateGas`.
-3. **Steal This Seed**: give the steal account a Home Key and its own vault, fund pocket and vault, put its real 24 words in `apps/web/src/config.ts` (set `isSample: false`), and add a counter of attempts and value kept.
-4. **Contracts quality**: fuzz and invariant tests, reach 100+, Slither report, QCAI audit stage 1 and 2 (owner runs these from the Dashboard), `docs/audit/` + `docs/AUDIT.md`.
-5. **Hosting**: deploy `apps/web` (Vercel or similar); the bundle is 3.2 MB, so code-split the routes.
-6. **Submission**: README final (add live addresses and TESTNET results), cover image 16:9 at least 1200x675, 3-minute video (script in PLAN.md section 7), project page Description and How it's made, every testnet address listed, Declared vs Verified all green.
+2. **Steal This Seed**: give the steal account a Home Key and its own vault, fund pocket and vault, put its real 24 words in `apps/web/src/config.ts` (set `isSample: false`), and add a counter of attempts and value kept.
+3. **Contracts quality**: fuzz and invariant tests, reach 100+, Slither report, QCAI audit stage 1 and 2 (owner runs these from the Dashboard), `docs/audit/` + `docs/AUDIT.md`.
+4. **Hosting**: deploy `apps/web` (Vercel or similar); the bundle is 3.2 MB, so code-split the routes.
+5. **Submission**: README final (add live addresses and TESTNET results), cover image 16:9 at least 1200x675, 3-minute video (script in PLAN.md section 7), project page Description and How it's made, every testnet address listed, Declared vs Verified all green.
+6. **Per-user vaults**: each owner needs their own vault bound to their Home Key. Today `apps/web/src/config.ts` points at the one demo vault and the Pocket hides it from other accounts. Add a deploy-your-vault flow (factory contract or deploy from the Pocket inside a window), then look the vault up per account.
 7. **Vault hardening found by the threat model**: restrict top-ups to the registered Pocket address (a stolen Home Key alone can currently send one day's cap anywhere), and look at the stolen-Home-Key race during rotation (THREAT_MODEL.md case 3).
 8. Build in public daily on the project page and X (#BuildBeforeQDay). Drafts live in `docs/posts/`; note in the change log when one is posted.
 
@@ -212,3 +214,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 | 17 Nov 20:35 | Pocket opens both account kinds (QoreX classic by default) and only scoped windows; QoreX path proven on chain (`s9-qorex.ts`); found that testnet REST has no CORS and added a same-origin proxy (Vite + vercel.json). Docs corrected: QoreX accounts are classic `m/44'/118'`, not 0x |
 | 17 Nov 20:45 | Drafted the first build-in-public update (`docs/posts/2026-11-17-update.md`), not yet posted |
 | 17 Nov 20:55 | Vault screen mocked up (`docs/design/PocketVault.dc.html`, added to the design canvas); waiting for the owner's approval before building |
+| 17 Nov 21:35 | Vault screen built from the approved mockup; top-up, withdraw and cancel run end to end in a browser on the live chain; vault only shown to the account whose Home Key it trusts. Screenshots in `docs/screens/`. Pocket window used up again before the drill |

@@ -60,6 +60,19 @@ After the rotation, the account's registered key equals the Home Key and not the
 | After the delay: Home Key opens a 1-tx window to the vault only | code 0 | `2E23ED9A…AE3231FB` |
 | Execute withdrawal id 0 (anyone may call; the Home Key already signed it when queued) | success, Pocket 50 -> 150 fUSD, 60,894 gas; window then shows 0 txs left | `0x28c9aebb…87b3a` |
 
+### The vault screen, end to end in a browser
+
+Headless Chrome against the live chain, Pocket app built from `apps/web`. The test moved the request out with the screen's "Copy as text" fallback, signed it with the real Home Key code, and pasted the answer back (in normal use this is the animated QR).
+
+| Step in the app | Home Key read | Result | Tx |
+|---|---|---|---|
+| Home Key opens a vault-only window (3 calls, 1 QOR of fees, 300 blocks) | | code 0 | `CAE5F4A8…BE30F9E0` |
+| Top up 5 fUSD | "Top up your Pocket with 5 fUSD from your vault, now" | success | `0x0fe9e5db…72dc083` |
+| Withdraw 20 fUSD | "Withdraw 20 fUSD from your vault to your Pocket, after the waiting period" | queued as #1, countdown shown | `0x04bd4e69…174332` |
+| Cancel #1 | "Cancel waiting vault action #1" | cancelled, list empty | `0x107846c2…04996bd1` |
+
+After the three calls the window was used up (`live: false`), and the screen asked for a new one.
+
 ### A QoreX-style account (classic, `m/44'/118'`)
 
 Account `qor1eu6r8hjehspjx0z3m9s9vf04keundh8wsg8gzs`, script `s9-qorex.ts`.

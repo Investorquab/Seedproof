@@ -11,6 +11,7 @@ import {
   decodeRequestBody,
   encodeFrames,
   isLinkResponse,
+  isVaultResponse,
   signClassicalOnly,
   type ApprovalResponse,
   type LinkRequest,
@@ -36,6 +37,9 @@ import { accountInfo, broadcast, explorerTx, nativeBalance, registeredPqcKey, ty
 import { FEST_TOKENS, NETWORK, VAULT_ADDRESS, shortAddress } from "../config";
 import "./device.css";
 import "./pocket.css";
+import { PocketVault } from "./PocketVault";
+import { isOwnVault, readVault, sendVaultCall } from "../lib/vault";
+import { formatUnits } from "@seedproof/core";
 
 const STORE = "seedproof.pocket.v1";
 /** Which account the 24 words open: not secret, so kept in plain storage. */
@@ -54,7 +58,9 @@ interface Wallet {
   kind: AccountKind;
   address: string;
   /** 0x twin, evm accounts only. */
-  evm?: string;
+  evm?: `0x${string}`;
+  /** 0x private key, evm accounts only: signs vault calls on the EVM lane. Memory only. */
+  evmKey?: `0x${string}`;
   publicKey: Uint8Array;
   signer: OfflineDirectSigner;
   /** Kept in memory while open: needed once, to rotate away from the seed-derived key. */
@@ -79,6 +85,7 @@ type Flow =
   | { name: "home" }
   | { name: "send" }
   | { name: "window" }
+  | { name: "vault" }
   | { name: "ask"; frames: string[]; summary: string; onAnswer: (msg: unknown) => Promise<BroadcastOutcome> }
   | { name: "done"; outcome: BroadcastOutcome; summary: string };
 
@@ -106,7 +113,8 @@ export function Pocket() {
       evm: {
         kind: "evm",
         address: unified.cosmos,
-        evm: unified.evm,
+        evm: unified.evm as `0x${string}`,
+        evmKey: unified.privateKey as `0x${string}`,
         publicKey: hexToBytes(unified.publicKey as `0x${string}`),
         signer: ethDirectSigner(unified.privateKey as `0x${string}`, unified.cosmos, hexToBytes(unified.publicKey as `0x${string}`)),
         mnemonic,
@@ -364,6 +372,42 @@ function PocketHome({ wallet, onSwitch }: { wallet: Wallet; onSwitch: () => void
         : FEST_TOKENS.filter((t) => win.targets.includes(t.address.toLowerCase())).map((t) => `all your ${t.symbol}`)
       : [];
 
+  const vaultWindowOpen = Boolean(win?.live && win.targets.includes(VAULT_ADDRESS.toLowerCase()));
+
+  if (flow.name === "vault" && wallet.evm && wallet.evmKey) {
+    const evmKey = wallet.evmKey;
+    return (
+      <PocketVault
+        account={wallet.address}
+        pocket={wallet.evm}
+        vaultWindowOpen={vaultWindowOpen}
+        onBack={() => setFlow({ name: "home" })}
+        onOpenWindow={() =>
+          ask([
+            // About an hour, a few calls, fees only, and only the vault.
+            openEvmWindowMsg({ sender: wallet.address, blocks: 1_800, maxTxs: 5, maxValue: "1500000", allowedTargets: [VAULT_ADDRESS] }),
+          ])
+        }
+        onAsk={(req, summary, submit) =>
+          setFlow({
+            name: "ask",
+            frames: encodeFrames(req),
+            summary,
+            onAnswer: async (msg) => {
+              if (!isVaultResponse(msg)) throw new Error("That is not a Home Key answer to a vault request.");
+              return submit(msg);
+            },
+          })
+        }
+        onSend={(fn, args) => sendVaultCall(evmKey, fn, args)}
+        onDone={(outcome, summary) => {
+          setFlow({ name: "done", outcome, summary });
+          refresh();
+        }}
+      />
+    );
+  }
+
   if (flow.name === "ask") {
     return (
       <AskHomeKey
@@ -474,6 +518,10 @@ function PocketHome({ wallet, onSwitch }: { wallet: Wallet; onSwitch: () => void
         </button>
       </p>
 
+      {wallet.kind === "evm" && wallet.evm && protection === "home" && (
+        <VaultTeaser pocket={wallet.evm} registered={registered} onOpen={() => setFlow({ name: "vault" })} />
+      )}
+
       {loadError && (
         <div className="notice notice-plain">
           <div>
@@ -514,6 +562,43 @@ function PocketHome({ wallet, onSwitch }: { wallet: Wallet; onSwitch: () => void
           }
         />
       )}
+    </section>
+  );
+}
+
+function VaultTeaser({ pocket, registered, onOpen }: { pocket: `0x${string}`; registered: Uint8Array | null; onOpen: () => void }) {
+  const [fusd, setFusd] = useState<bigint | null>(null);
+  const [own, setOwn] = useState<boolean | null>(null);
+  useEffect(() => {
+    isOwnVault(registered)
+      .then(async (yes) => {
+        setOwn(yes);
+        if (yes) setFusd((await readVault(pocket)).balances[FEST_TOKENS[0].address] ?? 0n);
+      })
+      .catch(() => setOwn(null));
+  }, [pocket, registered]);
+  if (own === false) {
+    return (
+      <section aria-label="Vault" className="vault-teaser">
+        <span className="small vault-soft">No vault yet</span>
+        <p className="vault-note">
+          A vault is your own contract, bound to your Home Key. This testnet build is wired to one demo vault, and it trusts a different Home Key.
+        </p>
+      </section>
+    );
+  }
+  return (
+    <section aria-label="Vault" className="vault-teaser">
+      <div className="vault-row">
+        <span className="small vault-soft">At home, in your vault</span>
+        <span className="vault-note-xs">Needs Home Key</span>
+      </div>
+      <span className="vault-balance">
+        {fusd === null ? "…" : formatUnits(fusd, FEST_TOKENS[0].decimals)} <span>fUSD</span>
+      </span>
+      <button type="button" className="btn vault-btn-solid btn-block" onClick={onOpen}>
+        Open vault
+      </button>
     </section>
   );
 }

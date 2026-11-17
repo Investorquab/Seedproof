@@ -1,0 +1,38 @@
+/* The vault is the Home Key's money: brass, from the approved mockup (docs/design/PocketVault.dc.html). */
+.vault-head { display: flex; justify-content: space-between; align-items: center; }
+.vault-card { background: var(--brass-pale); color: var(--brass-ink); border-radius: 24px; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.vault-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.vault-soft { color: var(--brass-ink-2); }
+.vault-note-xs { font-size: 13px; color: var(--brass-ink-2); text-align: right; }
+.vault-balance { font-family: var(--font-display); font-stretch: 108%; font-weight: 850; font-size: 46px; line-height: 1; letter-spacing: -0.02em; }
+.vault-balance span { font-size: 22px; font-weight: 700; }
+.vault-others { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; font-size: 14px; }
+.vault-chip { background: var(--brass-card); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.vault-chip strong { overflow-wrap: anywhere; }
+.vault-chip span { color: var(--brass-ink-2); }
+.vault-meter { height: 8px; border-radius: 4px; overflow: hidden; }
+.vault-meter span { display: block; height: 100%; border-radius: 4px; }
+.vault-meter-brass { background: var(--brass-line); }
+.vault-meter-brass span { background: var(--brass-ink); }
+.vault-meter-ink { height: 6px; background: var(--line); }
+.vault-meter-ink span { background: var(--ink); }
+.vault-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.vault-btn-solid { background: var(--brass-ink); color: var(--brass-pale); min-height: 48px; }
+.vault-btn-solid:hover { background: #2E2108; color: var(--brass-pale); }
+.vault-btn-line { background: transparent; color: var(--brass-ink); border: 2px solid var(--brass-ink); min-height: 48px; }
+.vault-btn-line:hover { background: var(--brass-card); color: var(--brass-ink); }
+.vault-note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--brass-ink-2); }
+.vault-h2 { margin: 0; font-family: var(--font-display); font-stretch: 112%; font-weight: 800; font-size: 17px; }
+.vault-wait { background: var(--card); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.vault-wait .vault-row { align-items: center; }
+.vault-cancel { background: var(--refused-bg); color: var(--refused); min-height: 40px; padding: 0 14px; }
+.vault-cancel:hover { background: #F6DCD8; color: var(--refused-ink); }
+.vault-small-btn { min-height: 40px; padding: 0 14px; }
+.vault-guardians { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); line-height: 1.4; }
+.vault-dots { display: flex; gap: 4px; flex-shrink: 0; }
+.vault-dots span { width: 10px; height: 10px; border-radius: 5px; background: var(--verified); }
+/* The vault card on the Pocket home */
+.vault-teaser { background: var(--brass-pale); color: var(--brass-ink); border-radius: 24px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+.vault-teaser .vault-balance { font-size: 32px; }
+.vault-teaser .vault-balance span { font-size: 17px; }
+.vault-head .btn-ghost { padding-left: 0; }
