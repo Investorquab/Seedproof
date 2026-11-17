@@ -1,6 +1,8 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 23:20 UTC. Kept current as work lands; the change log is at the end._
+_Last updated: 17 Nov 2026, 23:45 UTC._ **Next owner: Claude Code** (see `CLAUDE.md` at the repo root for rules, commands and the drill duty).
+
+_Previous update: 17 Nov 2026, 23:20 UTC. Kept current as work lands; the change log is at the end._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
@@ -145,6 +147,7 @@ A copy of all three files was sent to the owner on 17 Nov 2026 (`seedproof-keys.
 | `s10-steal-link.ts` | Give the Steal This Seed account its independent Home Key |
 | `s11-steal-vault.ts [--fund]` | Check (and fund) the Steal This Seed vault made through the factory |
 | `npx hardhat run scripts/deploy-factory.ts --network diana` (in `contracts`) | Deploy the vault factory (done; address in `deployments/diana.json`) |
+| `../../apps/web/e2e/pocket.e2e.mts --account <pocket|steal|qorex> [--topup N]` | Browser end-to-end check of the Pocket on the live chain, Node playing the Home Key (read-only without `--topup`) |
 | `s7-badges.ts` | Funder publishes a QoreSeal key (seed in `.keys/funder-seal-seed.hex`) and swaps in pool 2 (Ship Weeks badges) |
 
 ---
@@ -234,3 +237,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 | 17 Nov 22:30 | Property tests (6 seeded runs by default; a 40 x 150 sweep passed) and Slither (8 findings triaged in `docs/audit/SLITHER.md`). Review found and fixed a no-code token address being treated as paid. 80 contract tests |
 | 17 Nov 22:45 | Routes and the exposure check load lazily (landing 3.3 MB to 258 KB); `vercel.json` carries install, build and rewrites; clean-clone build verified. Waiting on the owner to import the repo in Vercel |
 | 17 Nov 23:20 | Vault factory (v2 vaults) deployed; Pocket finds or creates the user's own vault; Steal This Seed's vault created through the app in a browser and funded. Web broadcast now waits for inclusion (found by the test). 85 contract tests |
+| 17 Nov 23:45 | README rewritten (live results, where `pqcVerify` and the scoped window are, addresses, honest limits). `CLAUDE.md` added for Claude Code. Reusable browser e2e at `apps/web/e2e/pocket.e2e.mts`. Handing off: the drill proof is scheduled for 08:41 UTC on 18 Nov in the previous session; CLAUDE.md says what to do if it has not landed by 12:00 UTC |

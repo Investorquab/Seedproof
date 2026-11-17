@@ -1,77 +1,102 @@
 # Seedproof
 
-**Every vault here survives a leaked key. Seedproof survives a leaked seed phrase.**
+**Most vaults here survive a leaked key. Seedproof survives a leaked seed phrase too.**
 
-A two-device account for [QoreChain](https://www.qorechain.io), built for [Build Before Q-Day](https://build.qorechain.io) (category: Post-Quantum dApp).
+A two-device account and post-quantum savings vault for [QoreChain](https://www.qorechain.io), built for [Build Before Q-Day](https://build.qorechain.io) (category: Post-Quantum dApp).
 
-> Status: in active development on the `qorechain-diana` testnet. Not audited. Testnet only.
-
-**Live on testnet:** vault `0xadB21AAC72079Ce455a0b09ee56f069bf5E4f27C`; split signing and seven seed-thief attempts checked on chain, with every tx hash in [docs/TESTNET.md](docs/TESTNET.md).
-Picking the project up? Start with [docs/HANDOFF.md](docs/HANDOFF.md).
+> Live on the `qorechain-diana` testnet. Not audited yet (QCAI audit pending). Testnet only.
+> Every claim below has a transaction hash in [docs/TESTNET.md](docs/TESTNET.md). Picking the project up? Start with [docs/HANDOFF.md](docs/HANDOFF.md).
 
 ## The problem
 
-QoreChain signs every native transaction twice: once with a classical secp256k1 key and once with a post-quantum ML-DSA-87 key. A thief who steals only the classical key cannot produce the second signature.
+QoreChain signs every native transaction twice: with a classical secp256k1 key and with a post-quantum ML-DSA-87 key. A thief who steals only the classical key cannot make the second signature.
 
-But the standard wallet derives the post-quantum key **from the same 24 words** as the classical key. The QoreX docs say so directly: "so there is no second backup". Before SDK 0.13.0 (10 Nov 2026), accounts built from a raw private key derived it **from that private key**.
+But the standard wallet derives the post-quantum key **from the same 24 words** as the classical key. The QoreX docs say so plainly ("so there is no second backup"), and QoreX cannot yet rotate that key. So the way people actually lose crypto (a seed phrase taken by an infostealer, a fake wallet extension, a photo of the backup, someone standing over you) hands the thief **both** keys.
 
-So the way people actually lose crypto (a seed phrase taken by an infostealer, a tampered wallet extension, or someone standing over you) hands the thief **both** keys.
+## What Seedproof does
 
-## How Seedproof works
+It moves the post-quantum key to a second device, so the 24 words alone can no longer move anything.
 
 | Piece | Holds | Can do alone |
 |---|---|---|
-| **Pocket** (your phone) | the classical key | spend inside today's small EVM window; ask the Home Key for anything else |
-| **Home Key** (a second device, can be offline) | an independent ML-DSA-87 key, not derived from your seed | approve windows, native sends, key changes and vault withdrawals, after reading them in plain language |
-| **Vault** (EVM contract) | your savings | release only with a Home Key signature, verified on chain by `pqcVerify`, after a 24-hour delay you can cancel |
-| **Guardians** (2 of 3) | one QoreSeal-sealed piece each (ML-KEM-1024 + X25519) | two of them, in person, rebuild the Home Key on a new device; one alone learns nothing |
+| **Pocket** (your phone) | the classical key, sealed by a passphrase | spend inside a small, scoped EVM window; ask the Home Key for everything else |
+| **Home Key** (a second device, can stay offline) | an independent ML-DSA-87 key from its own recovery code, not from your seed | read every request back in plain words, then sign: sends, windows, key changes, vault actions |
+| **Vault** (your own contract, made by a factory) | your savings | top-ups pay only your Pocket, capped per day; anything else waits 24 hours and can be cancelled; every action needs a Home Key signature checked on chain by `pqcVerify` |
+| **Guardians** (2 of 3) | one QoreSeal-sealed share each (ML-KEM-1024 + X25519) | two together rebuild a lost Home Key; one alone learns nothing. Vault guardians can freeze and cancel, never move funds |
 
-The Home Key signs first, on its own device. QoreChain's post-quantum signature covers the transaction body and auth info, not the classical signature, so the phone attaches the classical signature afterwards. Neither device ever holds both keys.
+How the split works: the chain's post-quantum signature covers the transaction body *without* its PQ extension, plus the auth info. So the phone builds the transaction, the Home Key signs it, and the phone attaches the PQ signature and adds its classical signature last. Neither device ever holds both keys.
 
-### What a thief with your seed phrase can do
+It works for normal QoreX accounts (classic `m/44'/118'`, no EVM side, so nothing on them moves without the Home Key) and for 0x accounts (`m/44'/60'`, which can also spend through scoped EVM windows).
 
-- Native transfer: **refused** (`pqc` code 21, the post-quantum signature does not match).
-- Re-key the account: **refused** (key changes need the current post-quantum key).
-- Vault withdrawal: **refused** (needs a Home Key signature, then a 24-hour delay).
-- EVM spend: only what today's open window allows, and the Pocket opens only scoped windows (QOR-only, vault-only or one token). On a QoreX (classic) account there is no EVM side at all, so a thief can move nothing.
+## Proven on the live testnet
 
-### Honest limits
+| What happened | Chain's answer |
+|---|---|
+| Rotate a live account's key from its seed-derived key to an independent Home Key (`MsgRotatePQCKey`) | accepted |
+| Send signed by the Home Key | accepted |
+| Thief with all 24 words: send | refused, `pqc` code 21 |
+| Thief: send with no PQ signature | refused, `pqc` code 20 |
+| Thief: swap the key for his own | refused, code 21 |
+| Thief: register a fresh key | refused, code 234 |
+| Thief: open a wide EVM window | refused, code 21 |
+| Thief: EVM send to himself through the open window | refused by the node: not an allowed target |
+| Thief: vault top-up signed with the seed-derived key | reverts `WrongHomeKey` |
+| Same flow on a classic QoreX-style account | Home Key send accepted, thief refused (code 21) |
+| Vault: Home Key top-up, over-limit top-up, withdrawal with delay, cancel | accepted, refused, waited then paid, cancelled |
+| In the browser app: top-up, withdraw, cancel, create your own vault | all on chain, the Home Key reading each one back in plain words |
 
-- An EVM window caps transaction count, QOR value, time and target contracts. It does **not** cap ERC-20 amounts, so a window that lists a token contract exposes that token's whole balance on the account. Keep savings in the Vault.
-- Once your Home Key is linked, the QoreX app can no longer send from that account (it signs with the key made from your 24 words, which the chain now refuses). You send from the Seedproof Pocket; QoreX still shows your balances.
-- Someone forcing you to go home is not stopped. The 24-hour delay and guardian cancel give time to react.
-- Testnet only: `pqcVerify` and the v3.2.8 window options are not on mainnet yet.
+## Where the required pieces are
 
-## Repository layout
+- **`pqcVerify`** (precompile `0x…0a01`): every vault action checks the Home Key's ML-DSA-87 signature in [`SeedproofVault.sol` line 160](contracts/contracts/SeedproofVault.sol#L160). Tested live: a valid signature returns true, a tampered one false; a top-up costs about 313,000 gas.
+- **Scoped EVM window**: the Pocket only opens QOR-only (`nativeOnly`), vault-only, factory-only or single-token windows, never an open-to-anything one ([`Pocket.tsx`](apps/web/src/pages/Pocket.tsx), `WindowForm`). On chain, the vault-only window refused the thief's transfer.
+- **Tests**: 85 Hardhat tests (real ML-DSA-87 signatures, seeded property tests with invariants after every step, the factory, byte vectors shared with the TypeScript core) and 62 core tests.
+- **Static analysis**: Slither, 8 findings, all reviewed ([docs/audit/SLITHER.md](docs/audit/SLITHER.md)).
+- **QCAI audit**: two-stage audit pending; reports will go in `docs/audit/` with `docs/AUDIT.md` mapping each finding.
+
+## Live addresses (qorechain-diana, EVM chain 9800)
+
+| What | Address |
+|---|---|
+| Vault factory (v2 vaults) | `0xD583AC106f7c6faDAe8C6E18eCf3FBa4554eF238` |
+| Steal This Seed vault (made in the app) | `0xEaCf1C1Dd83F2C08c4e3a56a2839Ba31663ceE29` |
+| First demo vault (v1, Q-Day Drill contract) | `0xadB21AAC72079Ce455a0b09ee56f069bf5E4f27C` |
+| Pocket test account (Home Key linked, drill account) | `qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq` |
+| QoreX-style test account (Home Key linked) | `qor1eu6r8hjehspjx0z3m9s9vf04keundh8wsg8gzs` |
+| Steal This Seed account (Home Key linked) | `qor1xkefca25d5dfwwy9tfg9rfs8tujas7pssu0pnd` |
+| Deployer and vault guardian | `qor1yezwppgc3y7dr4un8p4yxp4sum9tsmnpe48ghu` |
+
+## Honest limits
+
+- A window caps transaction count, QOR value, time and targets, but **not** ERC-20 amounts: a window that lists a token contract exposes that token's whole balance on the account. The Pocket says so before you open one. Keep savings in the vault.
+- Once your Home Key is linked, the QoreX app can no longer send from that account (it signs with the key from your 24 words, which the chain now refuses). You send from the Seedproof Pocket; QoreX still shows your balances.
+- Someone forcing you to unlock both devices is not stopped. The daily cap, the delay and guardian cancel limit what they get and give time to react.
+- A stolen Home Key **and** seed phrase together is every secret. The vault still makes them wait the delay, and a guardian can freeze it.
+- Testnet only: `pqcVerify` and the v3.2.8 window options are not on mainnet yet. Guardians in the demo are three browser profiles, not three people.
+
+Full analysis: [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) (nine attacker cases, including what we cannot stop yet).
+
+## Repository
 
 ```
-packages/core   two-device signing, Home Key linking, vault requests, guardian recovery
-                (Shamir 2 of 3 + QoreSeal), clear-signing decoder, exposure check, QR frames (56 tests)
-contracts/      Seedproof Vault (Hardhat + solc-js, 65 tests incl. shared vectors with core)
-apps/web        landing page, Pocket (phone), Home Key (second device), Guardian
+packages/core   two-device signing (both account kinds), Home Key linking, clear-signing decoder,
+                vault requests, guardian recovery (Shamir 2 of 3 + QoreSeal), exposure check,
+                animated QR frames, MsgConvertCoin; live-chain scripts in scripts/ (62 tests)
+contracts/      SeedproofVault (v2: registered Pocket), SeedproofVaultFactory, deploy scripts,
+                deployments/diana.json (85 tests)
+apps/web        landing page with the "One secret or two?" check, Pocket, Home Key, Guardian
+docs/           HANDOFF, TESTNET, THREAT_MODEL, PLAN, audit/, design/ (approved mockups), posts/
 ```
 
-## Run the app
+## Run it
 
 ```bash
-cd packages/core && npm install
-cd ../../apps/web && npm install && npm run dev
+(cd packages/core && npm install && npx vitest run)     # 62 tests
+(cd contracts && npm install && npx hardhat test)       # 85 tests
+(cd apps/web && npm install && npm run dev)             # http://localhost:5173
 ```
 
-Routes: `/` landing and "One secret or two?" check, `/pocket` the phone, `/home-key` the second device, `/guardian` for the people who can help rebuild a lost Home Key. Secrets are kept in the browser sealed with your passphrase (PBKDF2 600,000 rounds, AES-GCM). Testnet only.
-
-## Run the tests
-
-```bash
-# protocol (56 tests)
-cd packages/core && npm install && npm test
-
-# Seedproof Vault (65 tests)
-cd contracts && npm install && npx hardhat test
-```
-
-Contract tests sign with real ML-DSA-87 keys from `@qorechain/sdk`, check every signature with the real verifier in JavaScript, and only then mark it valid in a test double installed at the `pqcVerify` precompile address (`0x...0a01`). A signature that fails the real check is never accepted.
+Install `packages/core` before the web app (the app imports it directly). Routes: `/` landing and exposure check, `/pocket` the phone, `/home-key` the second device, `/guardian` for the people who can rebuild a lost Home Key. Secrets stay in the browser, sealed with your passphrase (PBKDF2 600,000 rounds, AES-GCM). The testnet REST API sends no CORS headers, so the app reads it through `/qore-rest` on its own origin (Vite proxy in dev, `vercel.json` when hosted).
 
 ## Credits
 
-Built with the QoreChain kits: [`@qorechain/sdk`](https://github.com/qorechain/qorechain-sdk), [`@qorechain/pqc`](https://github.com/qorechain/qorechain-pqc), and CosmJS. Licensed MIT.
+Built with the QoreChain kits [`@qorechain/sdk`](https://github.com/qorechain/qorechain-sdk), [`@qorechain/pqc`](https://github.com/qorechain/qorechain-pqc) and `@qorechain/qoreseal`, plus CosmJS, viem, Hardhat and React. Built with AI tools; see [AI_USAGE.md](AI_USAGE.md). Licensed MIT.

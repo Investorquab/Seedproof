@@ -27,3 +27,4 @@ Seedproof is built AI-native, with a human (Investorquab) directing and reviewin
 | 17 Nov 2026 | Seeded property tests for the vault, Slither run and triage, fix for no-code token addresses | Asked to keep building |
 | 17 Nov 2026 | Route-level code splitting, zero-config Vercel settings, clean-clone build check | Asked to keep building |
 | 17 Nov 2026 | Vault factory (contract, 5 tests, deploy), per-user vault lookup and "Create my vault" in the Pocket, broadcast waits for inclusion, Steal This Seed vault created through the app and funded | Asked to finish everything possible before handing off to Claude Code |
+| 17 Nov 2026 | README rewrite, CLAUDE.md for the Claude Code handoff, reusable browser e2e script | Asked for a handoff Claude Code can continue from |
