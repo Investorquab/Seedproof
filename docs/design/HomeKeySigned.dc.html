@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home Key: signed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#3F2E0B}a:hover{color:#1C2530}
+a:focus-visible,button:focus-visible{outline:3px solid #1C2530;outline-offset:3px}
+</style>
+</helmet>
+<div style="width:390px;height:844px;box-sizing:border-box;background:#F1E3BF;color:#3F2E0B;font-family:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;padding:56px 20px 24px;display:flex;flex-direction:column;gap:18px">
+
+  <header style="display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg width="24" height="24" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="15" height="32" rx="7.5" fill="#C9B27C"></rect><rect x="18" y="1" width="15" height="32" rx="7.5" fill="#3F2E0B"></rect></svg>
+      <span style="font-family:'Archivo',sans-serif;font-stretch:118%;font-weight:800;font-size:18px">Home Key</span>
+    </div>
+    <span style="font-size:13px;color:#5E4513;background:#E7D3A1;padding:6px 10px;border-radius:999px">Offline</span>
+  </header>
+
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <h1 style="margin:0;font-family:'Archivo',sans-serif;font-stretch:112%;font-weight:850;font-size:32px;line-height:1.05;letter-spacing:-0.015em">Signed. Now show your phone.</h1>
+    <p style="margin:0;font-size:16px;line-height:1.45;color:#5E4513">Send 30 fUSD from your vault to your Pocket</p>
+  </div>
+
+  <figure style="margin:0;background:#FFFFFF;border-radius:22px;padding:22px;display:flex;flex-direction:column;align-items:center;gap:14px">
+    <div role="img" aria-label="Animated QR code carrying the signature, frame 2 of 6" style="display:grid;grid-template-columns:repeat(29,minmax(0,1fr));width:290px;height:290px">
+      <sc-for list="{{cells}}" as="c" hint-placeholder-count="841">
+        <span style="background:{{c.fill}}"></span>
+      </sc-for>
+    </div>
+    <figcaption style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100%">
+      <div aria-hidden="true" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;width:100%">
+        <span style="height:5px;border-radius:3px;background:#3F2E0B"></span>
+        <span style="height:5px;border-radius:3px;background:#3F2E0B"></span>
+        <span style="height:5px;border-radius:3px;background:#E7D3A1"></span>
+        <span style="height:5px;border-radius:3px;background:#E7D3A1"></span>
+        <span style="height:5px;border-radius:3px;background:#E7D3A1"></span>
+        <span style="height:5px;border-radius:3px;background:#E7D3A1"></span>
+      </div>
+      <span style="font-size:14px;color:#5E4513;text-align:center">A post-quantum signature is 4,627 bytes, so it plays in 6 frames.</span>
+    </figcaption>
+  </figure>
+
+  <p style="margin:0;font-size:15px;line-height:1.5;color:#5E4513">This signature works once, for this request only. It cannot be reused for a bigger amount or another address.</p>
+
+  <div style="margin-top:auto">
+    <button type="button" style="width:100%;font:inherit;font-weight:700;font-size:16px;min-height:52px;border-radius:12px;background:transparent;color:#3F2E0B;border:2px solid #3F2E0B;cursor:pointer">Done</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var n = 29, seed = 41, cells = [];
+    function rnd() { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; }
+    function finder(r, c) {
+      var spots = [[0, 0], [0, n - 7], [n - 7, 0]];
+      for (var i = 0; i < spots.length; i++) {
+        var dr = r - spots[i][0], dc = c - spots[i][1];
+        if (dr >= -1 && dr <= 7 && dc >= -1 && dc <= 7) {
+          if (dr < 0 || dc < 0 || dr > 6 || dc > 6) return 0;
+          var edge = dr === 0 || dc === 0 || dr === 6 || dc === 6;
+          var core = dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4;
+          return edge || core ? 1 : 0;
+        }
+      }
+      return -1;
+    }
+    for (var r = 0; r < n; r++) {
+      for (var c = 0; c < n; c++) {
+        var f = finder(r, c);
+        var on = f === -1 ? (r === 6 || c === 6 ? (r + c) % 2 === 0 : rnd() > 0.5) : f === 1;
+        cells.push({ fill: on ? "#3F2E0B" : "#FFFFFF" });
+      }
+    }
+    return { cells: cells };
+  }
+}
+</script>
+</body>
+</html>

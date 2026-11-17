@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Seedproof: landing page</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0;background:#E9ECEF}
+a{color:#1C2530}a:hover{color:#8A6420}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #B5862F;outline-offset:3px}
+.seed-word{font-family:'Archivo',sans-serif;font-stretch:78%;font-weight:600}
+@media (max-width:900px){
+  .hero{grid-template-columns:minmax(0,1fr)!important}
+  .duo{grid-template-columns:minmax(0,1fr)!important}
+  .why{grid-template-columns:minmax(0,1fr)!important}
+  .h1{font-size:52px!important}
+  .seedgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+<div style="font-family:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;color:#1C2530;background:#E9ECEF;min-height:100vh">
+
+<header style="max-width:1240px;margin:0 auto;padding:28px 40px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap">
+  <a href="#top" style="display:flex;align-items:center;gap:12px;text-decoration:none">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="15" height="32" rx="7.5" fill="#1C2530"></rect><rect x="18" y="1" width="15" height="32" rx="7.5" fill="#B5862F"></rect><circle cx="8.5" cy="9" r="3" fill="#E9ECEF"></circle><circle cx="25.5" cy="9" r="3" fill="#E9ECEF"></circle></svg>
+    <span style="font-family:'Archivo',sans-serif;font-stretch:118%;font-weight:800;font-size:22px;letter-spacing:-0.01em">Seedproof</span>
+  </a>
+  <nav aria-label="Main" style="display:flex;gap:28px;align-items:center;flex-wrap:wrap;font-size:16px">
+    <a href="#how" style="text-decoration:none">How it works</a>
+    <a href="#steal" style="text-decoration:none">Steal this seed</a>
+    <a href="#check" style="text-decoration:none">Check your account</a>
+    <a href="https://github.com/Investorquab/Seedproof" style="text-decoration:none">GitHub</a>
+    <a href="Pocket.dc.html" style="background:#1C2530;color:#E9ECEF;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:700">Set up Seedproof</a>
+  </nav>
+</header>
+
+<main id="top" style="max-width:1240px;margin:0 auto;padding:24px 40px 0">
+
+  <section id="steal" class="hero" style="display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:56px;align-items:start;padding:40px 0 96px">
+    <div style="display:flex;flex-direction:column;gap:28px;padding-top:24px">
+      <h1 class="h1" style="margin:0;font-family:'Archivo',sans-serif;font-stretch:112%;font-weight:850;font-size:72px;line-height:0.98;letter-spacing:-0.025em">Here are my 24 words. Take them.</h1>
+      <p style="margin:0;font-size:20px;line-height:1.55;max-width:34em">This testnet account's seed phrase is public on purpose. Its post-quantum key lives on a second device and is not made from these words, so they open today's pocket money and nothing else.</p>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <a href="#ledger" style="background:#1C2530;color:#E9ECEF;text-decoration:none;padding:16px 24px;border-radius:10px;font-weight:700;font-size:17px">Try to drain it</a>
+        <a href="#how" style="color:#1C2530;text-decoration:none;padding:16px 24px;border-radius:10px;font-weight:700;font-size:17px;box-shadow:inset 0 0 0 2px #1C2530">How it works</a>
+      </div>
+      <p style="margin:0;font-size:15px;line-height:1.5;color:#46525F;max-width:36em">Every other vault in this fest survives a leaked key. Seedproof survives a leaked seed phrase.</p>
+    </div>
+
+    <figure style="margin:0;background:#F7F8F9;border-radius:22px;padding:30px 30px 26px;box-shadow:0 1px 0 #C9CFD6,0 30px 60px -30px rgba(28,37,48,.35);display:flex;flex-direction:column;gap:22px">
+      <figcaption style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap">
+        <span style="font-family:'Archivo',sans-serif;font-stretch:112%;font-weight:800;font-size:19px">Recovery phrase</span>
+        <span style="font-size:14px;color:#46525F">Testnet account qor1h7…2xk9, funded</span>
+      </figcaption>
+      <ol class="seedgrid" style="margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 10px">
+        <sc-for list="{{words}}" as="w" hint-placeholder-count="24">
+          <li style="display:flex;align-items:baseline;gap:8px;padding:10px 12px;border-radius:8px;background:#E9ECEF">
+            <span style="font-size:12px;color:#5B6672;min-width:18px;text-align:right">{{w.n}}</span>
+            <span class="seed-word" style="font-size:19px;letter-spacing:0.01em">{{w.word}}</span>
+          </li>
+        </sc-for>
+      </ol>
+      <div id="ledger" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+        <div style="background:#1C2530;color:#E9ECEF;border-radius:12px;padding:16px 16px 18px;display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:13px;color:#B9C2CC">Open to these words</span>
+          <span style="font-family:'Archivo',sans-serif;font-stretch:100%;font-weight:800;font-size:26px">20 fUSD</span>
+          <span style="font-size:13px;color:#B9C2CC;line-height:1.4">Today's pocket window, 5 payments max</span>
+        </div>
+        <div style="background:#F1E3BF;border-radius:12px;padding:16px 16px 18px;display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:13px;color:#5E4513">Locked at home</span>
+          <span style="font-family:'Archivo',sans-serif;font-stretch:100%;font-weight:800;font-size:26px;color:#3F2E0B">1,000 fUSD</span>
+          <span style="font-size:13px;color:#5E4513;line-height:1.4">Needs the Home Key and a 24 hour wait</span>
+        </div>
+        <div style="background:#E9ECEF;border-radius:12px;padding:16px 16px 18px;display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:13px;color:#46525F">Last attempt</span>
+          <span style="font-family:'Archivo',sans-serif;font-stretch:100%;font-weight:800;font-size:26px;color:#A8322A">Refused</span>
+          <span style="font-size:13px;color:#46525F;line-height:1.4">Native send, post-quantum signature did not match</span>
+        </div>
+      </div>
+    </figure>
+  </section>
+
+  <section aria-labelledby="open-title" style="padding:0 0 104px;display:flex;flex-direction:column;gap:32px">
+    <h2 id="open-title" style="margin:0;font-family:'Archivo',sans-serif;font-stretch:112%;font-weight:800;font-size:44px;line-height:1.05;letter-spacing:-0.02em;max-width:18em">What a stolen seed phrase opens</h2>
+    <div style="overflow-x:auto;border-radius:18px;background:#F7F8F9">
+      <table style="width:100%;border-collapse:collapse;min-width:720px;font-size:17px">
+        <thead>
+          <tr style="text-align:left">
+            <th scope="col" style="padding:22px 28px;font-weight:700;color:#46525F;font-size:15px">The thief tries to</th>
+            <th scope="col" style="padding:22px 28px;font-weight:700;color:#46525F;font-size:15px">A standard QoreChain account</th>
+            <th scope="col" style="padding:22px 28px;font-weight:700;color:#46525F;font-size:15px">A Seedproof account</th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+            <tr style="border-top:1px solid #D8DDE2">
+              <th scope="row" style="padding:20px 28px;text-align:left;font-weight:700">{{r.act}}</th>
+              <td style="padding:20px 28px;color:#A8322A;font-weight:700">{{r.std}}</td>
+              <td style="padding:20px 28px;font-weight:700;color:{{r.spColor}}">{{r.sp}}</td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin:0;font-size:15px;color:#46525F;max-width:52em;line-height:1.55">A standard account's post-quantum key is made from the same 24 words. The QoreX docs say it plainly: the key needs no separate backup. Accounts made from a raw private key with SDK 0.12 or earlier made it from that key instead.</p>
+  </section>
+
+  <section id="how" aria-labelledby="how-title" style="padding:0 0 104px;display:flex;flex-direction:column;gap:32px">
+    <h2 id="how-title" style="margin:0;font-family:'Archivo',sans-serif;font-stretch:112%;font-weight:800;font-size:44px;line-height:1.05;letter-spacing:-0.02em;max-width:18em">Two devices. Neither holds both keys.</h2>
+    <div class="duo" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px">
+      <article style="background:#1C2530;color:#E9ECEF;border-radius:22px;padding:36px;display:flex;flex-direction:column;gap:18px">
+        <h3 style="margin:0;font-family:'Archivo',sans-serif;font-stretch:118%;font-weight:800;font-size:30px">Pocket</h3>
+        <p style="margin:0;font-size:18px;line-height:1.55;color:#C9D1D9">Your phone. It keeps the classical key from your 24 words and spends freely inside today's window: a few payments, to the token you chose, until tonight.</p>
+        <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px;font-size:17px;line-height:1.5">
+          <li>Shows what a thief could take right now</li>
+          <li>Asks the Home Key for anything bigger</li>
+          <li>Never holds the post-quantum key</li>
+        </ul>
+      </article>
+      <article style="background:#F1E3BF;color:#3F2E0B;border-radius:22px;padding:36px;display:flex;flex-direction:column;gap:18px">
+        <h3 style="margin:0;font-family:'Archivo',sans-serif;font-stretch:118%;font-weight:800;font-size:30px">Home Key</h3>
+        <p style="margin:0;font-size:18px;line-height:1.55;color:#5E4513">A second device that stays home, even an old phone with no network. It holds a post-quantum key that no seed phrase can rebuild.</p>
+        <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px;font-size:17px;line-height:1.5">
+          <li>Reads every request back to you in plain words</li>
+          <li>Refuses anything it cannot read</li>
+          <li>Can be rebuilt by 2 of your 3 guardians if lost</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title" style="padding:0 0 104px;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:56px;align-items:start">
+    <h2 id="why-title" style="margin:0;font-family:'Archivo',sans-serif;font-stretch:112%;font-weight:800;font-size:44px;line-height:1.05;letter-spacing:-0.02em">People lose their words, not their keys</h2>
+    <div style="display:flex;flex-direction:column;gap:22px;font-size:18px;line-height:1.6;max-width:36em">
+      <p style="margin:0">On Christmas Eve 2025 a tampered Trust Wallet browser extension shipped a backdoor that sent users' recovery phrases to an attacker. Infostealers now search hundreds of wallet extensions for them. And in 2025 CertiK counted 72 attacks where someone was physically forced to open their wallet.</p>
+      <p style="margin:0">Each of these takes the 24 words. On QoreChain today, the 24 words are both keys. Seedproof makes them one.</p>
+    </div>
+  </section>
+
+  <section id="check" aria-labelledby="check-title" style="padding:0 0 112px">
+    <div style="background:#F7F8F9;border-radius:22px;padding:44px;display:flex;flex-direction:column;gap:24px">
+      <h2 id="check-title" style="margin:0;font-family:'Archivo',sans-serif;font-stretch:112%;font-weight:800;font-size:40px;line-height:1.05;letter-spacing:-0.02em">One secret or two?</h2>
+      <p style="margin:0;font-size:18px;line-height:1.55;max-width:40em">Check whether your post-quantum key can be rebuilt from your recovery phrase. Use a throwaway testnet account. The check runs in this browser and sends nothing.</p>
+      <form style="display:flex;flex-direction:column;gap:14px;max-width:760px">
+        <label for="addr" style="font-weight:700;font-size:16px">Account address</label>
+        <input id="addr" value="qor1h7m3c5u9yq2r8fz0l6t4wax2xk9" style="font:inherit;font-size:17px;padding:14px 16px;border-radius:10px;border:2px solid #AEB7C0;background:#fff;color:#1C2530">
+        <label for="words" style="font-weight:700;font-size:16px">Recovery phrase or private key</label>
+        <textarea id="words" rows="3" style="font:inherit;font-size:17px;padding:14px 16px;border-radius:10px;border:2px solid #AEB7C0;background:#fff;color:#1C2530;resize:vertical">change wish distance blade march cement badge symbol mimic head music focus …</textarea>
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          <button type="button" style="font:inherit;font-weight:700;font-size:17px;background:#1C2530;color:#E9ECEF;border:0;padding:15px 24px;border-radius:10px;cursor:pointer">Check this account</button>
+          <span style="font-size:15px;color:#46525F">Checks QoreX, the SDK and SDK 0.12 raw-key derivations</span>
+        </div>
+      </form>
+      <div role="status" style="display:flex;gap:20px;align-items:flex-start;background:#FBEDEB;border-radius:14px;padding:22px 24px;max-width:760px">
+        <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" style="flex:none;margin-top:2px"><circle cx="14" cy="14" r="12" fill="none" stroke="#A8322A" stroke-width="2.5"></circle><path d="M14 7v9M14 20v1" stroke="#A8322A" stroke-width="2.5" stroke-linecap="round"></path></svg>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <strong style="font-family:'Archivo',sans-serif;font-stretch:110%;font-size:22px;color:#8C2620">One secret</strong>
+          <span style="font-size:17px;line-height:1.5;color:#5A1C17">Your post-quantum key comes from your 24 words. Anyone who has the words holds both keys. Move it to a Home Key to fix this.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer style="background:#1C2530;color:#C9D1D9">
+  <div style="max-width:1240px;margin:0 auto;padding:44px 40px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-size:15px;line-height:1.6">
+    <p style="margin:0;max-width:40em">Seedproof is a testnet prototype for Build Before Q-Day, the QoreChain developer fest. Not audited. Do not use real funds.</p>
+    <p style="margin:0"><a href="https://github.com/Investorquab/Seedproof" style="color:#F1E3BF">Source on GitHub</a>, MIT licence</p>
+  </div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":3060}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var list = ["change","wish","distance","blade","march","cement","badge","symbol","mimic","head","music","focus","bicycle","buyer","palace","gloom","erode","another","spatial","teach","tired","comfort","member","slender"];
+    var words = list.map(function (w, i) { return { n: i + 1, word: w }; });
+    var ok = "#2E6A50", warn = "#8A6420";
+    var rows = [
+      { act: "Send QOR from the account", std: "Done, all of it", sp: "Refused, signature does not match", spColor: ok },
+      { act: "Open a bigger spending window", std: "Done", sp: "Refused, needs the Home Key", spColor: ok },
+      { act: "Replace the post-quantum key", std: "Done, owner locked out", sp: "Refused, needs the Home Key", spColor: ok },
+      { act: "Withdraw savings", std: "Done", sp: "Refused, needs the Home Key, then 24 hours", spColor: ok },
+      { act: "Spend today's pocket", std: "Done", sp: "Up to today's limit, until you close it", spColor: warn }
+    ];
+    return { words: words, rows: rows };
+  }
+}
+</script>
+</body>
+</html>

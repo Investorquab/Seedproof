@@ -6,6 +6,9 @@ A two-device account for [QoreChain](https://www.qorechain.io), built for [Build
 
 > Status: in active development on the `qorechain-diana` testnet. Not audited. Testnet only.
 
+**Live on testnet:** vault `0xadB21AAC72079Ce455a0b09ee56f069bf5E4f27C`; split signing and seven seed-thief attempts checked on chain, with every tx hash in [docs/TESTNET.md](docs/TESTNET.md).
+Picking the project up? Start with [docs/HANDOFF.md](docs/HANDOFF.md).
+
 ## The problem
 
 QoreChain signs every native transaction twice: once with a classical secp256k1 key and once with a post-quantum ML-DSA-87 key. A thief who steals only the classical key cannot produce the second signature.
