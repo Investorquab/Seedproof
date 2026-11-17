@@ -8,3 +8,7 @@ keys/
 out/
 cache/
 .DS_Store
+artifacts/
+typechain-types/
+coverage/
+coverage.json

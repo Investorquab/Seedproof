@@ -14,3 +14,4 @@ Seedproof is built AI-native, with a human (Investorquab) directing and reviewin
 | Date (UTC) | What AI produced | Human contribution |
 |---|---|---|
 | 17 Nov 2026 | Field audit of 37 projects; found the seed-derived PQ key issue in QoreX docs and SDK 0.13.0 changelog; plan; `packages/core` two-device signing protocol, clear-signing decoder, exposure check; 13 tests | Wrote the research brief, chose Seedproof, set full-time scope, reviewed plan |
+| 17 Nov 2026 | `SeedproofVault.sol` (Home Key signed top-ups with daily caps, delayed withdrawals and rule changes, guardian cancel and freeze, Home Key rotation) and 64 Hardhat tests using real ML-DSA-87 signatures | Approved the vault design: pocket money instant, savings delayed and cancellable |

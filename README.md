@@ -42,7 +42,7 @@ The Home Key signs first, on its own device. QoreChain's post-quantum signature 
 
 ```
 packages/core   two-device signing protocol, clear-signing decoder, exposure check
-contracts/      Seedproof Vault (Foundry)            [in progress]
+contracts/      Seedproof Vault (Hardhat + solc-js), 64 tests
 apps/pocket     phone app                             [in progress]
 apps/homekey    Home Key app                          [in progress]
 apps/site       landing, exposure check, Steal This Seed   [in progress]
@@ -51,10 +51,14 @@ apps/site       landing, exposure check, Steal This Seed   [in progress]
 ## Run the tests
 
 ```bash
-cd packages/core
-npm install
-npm test
+# two-device signing protocol (13 tests)
+cd packages/core && npm install && npm test
+
+# Seedproof Vault (64 tests)
+cd contracts && npm install && npx hardhat test
 ```
+
+Contract tests sign with real ML-DSA-87 keys from `@qorechain/sdk`, check every signature with the real verifier in JavaScript, and only then mark it valid in a test double installed at the `pqcVerify` precompile address (`0x...0a01`). A signature that fails the real check is never accepted.
 
 ## Credits
 
