@@ -162,9 +162,8 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 4. **Contracts quality**: fuzz and invariant tests, reach 100+, Slither report, QCAI audit stage 1 and 2 (owner runs these from the Dashboard), `docs/audit/` + `docs/AUDIT.md`.
 5. **Hosting**: deploy `apps/web` (Vercel or similar); the bundle is 3.2 MB, so code-split the routes.
 6. **Submission**: README final (add live addresses and TESTNET results), cover image 16:9 at least 1200x675, 3-minute video (script in PLAN.md section 7), project page Description and How it's made, every testnet address listed, Declared vs Verified all green.
-9. Build in public daily on the project page and X (#BuildBeforeQDay).
-
 7. **Vault hardening found by the threat model**: restrict top-ups to the registered Pocket address (a stolen Home Key alone can currently send one day's cap anywhere), and look at the stolen-Home-Key race during rotation (THREAT_MODEL.md case 3).
+8. Build in public daily on the project page and X (#BuildBeforeQDay).
 
 ---
 
