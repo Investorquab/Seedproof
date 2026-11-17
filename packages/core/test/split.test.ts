@@ -127,6 +127,11 @@ describe("clear signing on the Home Key", () => {
     expect(d.lines[0]?.text).toMatch(/^Send 2\.5 QOR to qor1abcdef\.\.\./);
   });
 
+  it("names a send to the account itself", () => {
+    const d = decodeRequestBody(request([send(account.address, "1000000")]));
+    expect(d.lines[0]?.text).toBe("Send 1 QOR to your own account");
+  });
+
   it("flags an unscoped window as critical and a scoped one as high", () => {
     const open = (targets: string[]) =>
       openEvmWindowMsg({ sender: account.address, blocks: 7200, maxTxs: 5, maxValue: "20000000", allowedTargets: targets });

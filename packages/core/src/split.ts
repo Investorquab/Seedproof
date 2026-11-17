@@ -174,3 +174,16 @@ export function verifyPqcLikeChain(
   const msg = hybridSignBytes(signBytesVersion, chainId, b0, raw.authInfoBytes);
   return pqcVerify(registeredPqcPublicKey, msg, sig);
 }
+
+/**
+ * Classical-only signing. The chain accepts exactly one such tx per account:
+ * the FIRST post-quantum key registration (MsgRegisterPQCKeyV2). Everything
+ * after it must be hybrid-signed.
+ */
+export async function signClassicalOnly(req: ApprovalRequest, signer: OfflineDirectSigner): Promise<Uint8Array> {
+  const bodyBytes = b64.dec(req.bodyB0);
+  const authInfoBytes = b64.dec(req.authInfo);
+  const signDoc = SignDoc.fromPartial({ bodyBytes, authInfoBytes, chainId: req.chainId, accountNumber: BigInt(req.accountNumber) });
+  const { signature } = await signer.signDirect(req.account, signDoc);
+  return TxRaw.encode(TxRaw.fromPartial({ bodyBytes, authInfoBytes, signatures: [b64.dec(signature.signature)] })).finish();
+}

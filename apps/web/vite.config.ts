@@ -10,7 +10,7 @@ export default defineConfig({
   resolve: {
     alias: { "@seedproof/core": core },
     // One copy of the SDK and CosmJS, whether imported by the app or by core.
-    dedupe: ["@qorechain/sdk", "@cosmjs/proto-signing", "@cosmjs/stargate", "@cosmjs/amino", "cosmjs-types"],
+    dedupe: ["viem", "@qorechain/sdk", "@cosmjs/proto-signing", "@cosmjs/stargate", "@cosmjs/amino", "cosmjs-types"],
   },
   server: { fs: { allow: [path.resolve(__dirname, "../..")] } },
   build: { target: "es2022", chunkSizeWarningLimit: 4000 },

@@ -2,17 +2,23 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { EncodeObject, OfflineDirectSigner } from "@cosmjs/proto-signing";
 import {
+  approveRequest,
   assembleSignedTx,
+  buildLinkMessage,
   createApprovalRequest,
+  createLinkRequest,
   decodeRequestBody,
   encodeFrames,
-  type ApprovalRequest,
+  isLinkResponse,
+  signClassicalOnly,
   type ApprovalResponse,
+  type LinkRequest,
 } from "@seedproof/core";
 import {
   MSG_SEND_TYPE_URL,
   closeEvmWindowMsg,
   deriveNativeAccount,
+  derivePqcCanonical,
   directSignerFromPrivateKey,
   fetchEvmWindow,
   openEvmWindowMsg,
@@ -22,7 +28,7 @@ import { Logo } from "../components/Logo";
 import { AnimatedQr } from "../components/AnimatedQr";
 import { FrameReader } from "../components/FrameReader";
 import { hasSealed, seal, unseal, forget } from "../lib/sealed";
-import { accountInfo, broadcast, explorerTx, nativeBalance, type BroadcastOutcome } from "../lib/chain";
+import { accountInfo, broadcast, explorerTx, nativeBalance, registeredPqcKey, type BroadcastOutcome } from "../lib/chain";
 import { NETWORK, shortAddress } from "../config";
 import "./device.css";
 import "./pocket.css";
@@ -34,7 +40,12 @@ interface Wallet {
   address: string;
   publicKey: Uint8Array;
   signer: OfflineDirectSigner;
+  /** Kept in memory while open: needed once, to rotate away from the seed-derived key. */
+  mnemonic: string;
 }
+
+/** none: no post-quantum key on chain. seed: the key comes from the 24 words. home: a separate Home Key. */
+type Protection = "checking" | "none" | "seed" | "home" | "unknown";
 
 interface WindowView {
   live: boolean;
@@ -47,7 +58,7 @@ type Flow =
   | { name: "home" }
   | { name: "send" }
   | { name: "window" }
-  | { name: "ask"; req: ApprovalRequest; frames: string[]; summary: string }
+  | { name: "ask"; frames: string[]; summary: string; onAnswer: (msg: unknown) => Promise<BroadcastOutcome> }
   | { name: "done"; outcome: BroadcastOutcome; summary: string };
 
 const qor = (uqor: bigint | string) => {
@@ -62,7 +73,7 @@ export function Pocket() {
 
   const open = async (mnemonic: string) => {
     const acct = await deriveNativeAccount(mnemonic);
-    setWallet({ address: acct.address, publicKey: acct.publicKey, signer: await directSignerFromPrivateKey(acct.privateKey, "qor") });
+    setWallet({ address: acct.address, publicKey: acct.publicKey, signer: await directSignerFromPrivateKey(acct.privateKey, "qor"), mnemonic });
   };
 
   return (
@@ -172,14 +183,24 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
   const [win, setWin] = useState<WindowView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [flow, setFlow] = useState<Flow>({ name: "home" });
+  const [protection, setProtection] = useState<Protection>("checking");
+  const [registered, setRegistered] = useState<Uint8Array | null>(null);
 
   const refresh = useCallback(async () => {
     setLoadError(null);
     try {
-      const [b, w] = await Promise.all([
+      const [b, w, reg] = await Promise.all([
         nativeBalance(wallet.address),
         fetchEvmWindow({ rest: NETWORK.rest, address: wallet.address }),
+        registeredPqcKey(wallet.address),
       ]);
+      setRegistered(reg);
+      if (!reg) setProtection("none");
+      else {
+        const seedPub = derivePqcCanonical(wallet.address, wallet.mnemonic).publicKey;
+        const same = seedPub.length === reg.length && seedPub.every((x, i) => x === reg[i]);
+        setProtection(same ? "seed" : "home");
+      }
       setBalance(b);
       setWin({
         live: Boolean(w.live),
@@ -189,6 +210,7 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
       });
     } catch {
       setLoadError("Could not reach the QoreChain testnet.");
+      setProtection("unknown");
     }
   }, [wallet.address]);
 
@@ -209,7 +231,52 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
       signBytesVersion: NETWORK.signBytesVersion,
     });
     const summary = decodeRequestBody(req).lines.map((l) => l.text).join(". ");
-    setFlow({ name: "ask", req, frames: encodeFrames(req), summary });
+    setFlow({
+      name: "ask",
+      frames: encodeFrames(req),
+      summary,
+      onAnswer: async (msg) => {
+        const res = msg as ApprovalResponse;
+        if (res?.kind !== "seedproof/approval-response") throw new Error("That is not a Home Key answer to this request.");
+        return broadcast(await assembleSignedTx(req, res, wallet.signer));
+      },
+    });
+  };
+
+  /** Make the Home Key the account's post-quantum key (register, or rotate away from the seed-derived key). */
+  const link = async () => {
+    const linkReq: LinkRequest = createLinkRequest({ chainId: NETWORK.chainId, account: wallet.address, registeredPublicKey: registered });
+    setFlow({
+      name: "ask",
+      frames: encodeFrames(linkReq),
+      summary:
+        linkReq.mode === "register"
+          ? "Make your Home Key this account's post-quantum key"
+          : "Replace the post-quantum key made from your 24 words with your Home Key",
+      onAnswer: async (msg) => {
+        if (!isLinkResponse(msg)) throw new Error("That is not a Home Key answer to a link request.");
+        const seedKey = derivePqcCanonical(wallet.address, wallet.mnemonic);
+        const linkMsg = buildLinkMessage(linkReq, msg, { classicalPubkey: wallet.publicKey, oldKey: seedKey });
+        const info = await accountInfo(wallet.address);
+        const req = createApprovalRequest({
+          chainId: NETWORK.chainId,
+          account: wallet.address,
+          classicalPubkey: wallet.publicKey,
+          accountNumber: info.accountNumber,
+          sequence: info.sequence,
+          messages: [linkMsg],
+          fee: FEE,
+          signBytesVersion: NETWORK.signBytesVersion,
+        });
+        if (linkReq.mode === "register") {
+          // The first registration is the one tx the chain accepts with only the classical signature.
+          return broadcast(await signClassicalOnly(req, wallet.signer));
+        }
+        // A rotation is signed one last time by the seed-derived key it retires.
+        const res = await approveRequest(req, seedKey, () => true);
+        return broadcast(await assembleSignedTx(req, res, wallet.signer));
+      },
+    });
   };
 
   const exposure = win?.live ? BigInt(win.remainingValue) : 0n;
@@ -219,7 +286,6 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
     return (
       <AskHomeKey
         flow={flow}
-        wallet={wallet}
         onCancel={() => setFlow({ name: "home" })}
         onDone={(outcome) => {
           setFlow({ name: "done", outcome, summary: flow.summary });
@@ -253,6 +319,26 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
 
   return (
     <section className="stack">
+      {(protection === "none" || protection === "seed") && (
+        <div className="notice notice-bad">
+          <div className="stack-tight">
+            <div>
+              <strong>{protection === "none" ? "Not protected yet" : "One secret"}</strong>
+              <span>
+                {protection === "none"
+                  ? "This account has no post-quantum key. Link your Home Key before anyone else registers one."
+                  : "Your post-quantum key comes from your 24 words. Anyone who has the words holds both keys."}
+              </span>
+            </div>
+            <button type="button" className="btn btn-ink" onClick={link}>
+              Link your Home Key
+            </button>
+          </div>
+        </div>
+      )}
+      {protection === "home" && (
+        <p className="small protected-line">Protected by your Home Key. Your 24 words alone can only spend today's window.</p>
+      )}
       <div className="pocket-card">
         <div className="stack-tight" style={{ gap: 4 }}>
           <span className="small pocket-soft">On this account</span>
@@ -426,27 +512,26 @@ function WindowForm({ onSubmit, onCancel }: { onSubmit: (maxTxs: number, uqor: s
 
 function AskHomeKey({
   flow,
-  wallet,
   onCancel,
   onDone,
 }: {
-  flow: { req: ApprovalRequest; frames: string[]; summary: string };
-  wallet: Wallet;
+  flow: { frames: string[]; summary: string; onAnswer: (msg: unknown) => Promise<BroadcastOutcome> };
   onCancel: () => void;
   onDone: (o: BroadcastOutcome) => void;
 }) {
   const [step, setStep] = useState<"show" | "read">("show");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const onAnswer = async (msg: unknown) => {
     setError(null);
-    const res = msg as ApprovalResponse;
-    if (res?.kind !== "seedproof/approval-response") return setError("That is not a Home Key answer.");
+    setBusy(true);
     try {
-      const tx = await assembleSignedTx(flow.req, res, wallet.signer);
-      onDone(await broadcast(tx));
+      onDone(await flow.onAnswer(msg));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not finish the transaction.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -468,6 +553,7 @@ function AskHomeKey({
       ) : (
         <FrameReader tone="pocket" onMessage={onAnswer} />
       )}
+      {busy && <p className="small muted" role="status">Sending to QoreChain…</p>}
       {error && (
         <div className="notice notice-bad">
           <div>

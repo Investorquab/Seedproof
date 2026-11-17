@@ -3,10 +3,14 @@ import { Link } from "react-router-dom";
 import {
   approveRequest,
   decodeRequestBody,
+  describeVaultRequest,
   encodeFrames,
   isApprovalRequest,
-  type ApprovalRequest,
-  type DecodedRequest,
+  isLinkRequest,
+  isVaultRequest,
+  signLinkRequest,
+  signVaultRequest,
+  type DecodedLine,
 } from "@seedproof/core";
 import { generatePqcRecoveryCode, isValidBech32, pqcKeyFromRecoveryCode, sha256Hex, type PqcKeypair } from "@qorechain/sdk";
 import { Logo } from "../components/Logo";
@@ -23,20 +27,107 @@ interface Stored {
   recoveryCode: string;
 }
 
+/** What the review screen shows, whatever kind of request it came from. */
+interface PendingReview {
+  title: string;
+  lines: DecodedLine[];
+  meta: [string, string][];
+  /** Why it cannot be signed, if it cannot. */
+  blocked: string | null;
+  /** Produces the answer to hand back to the phone. */
+  sign: () => Promise<unknown>;
+  summary: string;
+}
+
 type Screen =
   | { name: "setup" }
   | { name: "show-code"; address: string; code: string }
   | { name: "locked" }
   | { name: "ready" }
-  | { name: "review"; req: ApprovalRequest; decoded: DecodedRequest }
+  | { name: "review"; review: PendingReview }
   | { name: "signed"; summary: string; frames: string[] }
   | { name: "refused"; why: string };
 
 const fingerprint = (k: PqcKeypair) => sha256Hex(k.publicKey).replace(/^0x/, "").slice(0, 16).replace(/(.{4})(?=.)/g, "$1 ");
+const minutesLeft = (unixSeconds: number) => Math.max(0, Math.round((unixSeconds - Date.now() / 1000) / 60));
+const expiresText = (m: number) => (m > 0 ? `In ${m} minute${m === 1 ? "" : "s"}` : "Expired");
 
 export function HomeKey() {
   const [screen, setScreen] = useState<Screen>(() => (hasSealed(STORE) ? { name: "locked" } : { name: "setup" }));
   const [key, setKey] = useState<{ address: string; pq: PqcKeypair } | null>(null);
+
+  /** Turn whatever the phone sent into something a person can read before signing. */
+  const toReview = (msg: unknown): PendingReview | string => {
+    if (!key) return "The Home Key is not open.";
+
+    if (isApprovalRequest(msg)) {
+      if (msg.account !== key.address) return "This request is for a different account than this Home Key protects.";
+      if (msg.chainId !== NETWORK.chainId) return `This request is for ${msg.chainId}, not ${NETWORK.name}.`;
+      const decoded = decodeRequestBody(msg);
+      const m = minutesLeft(msg.expiresAt);
+      return {
+        title: "Your phone is asking to",
+        lines: decoded.lines,
+        meta: [
+          ["Account", shortAddress(msg.account)],
+          ["Expires", expiresText(m)],
+          ["Network", NETWORK.name],
+          ...(decoded.memo ? ([["Memo", decoded.memo]] as [string, string][]) : []),
+        ],
+        blocked:
+          m <= 0
+            ? "The request has expired. Make a new one on your phone."
+            : !decoded.understood || decoded.hasExtension
+              ? "It contains something this Home Key cannot read. Refuse it."
+              : null,
+        sign: () => approveRequest(msg, key.pq, () => true),
+        summary: decoded.lines.map((l) => l.text).join(". "),
+      };
+    }
+
+    if (isLinkRequest(msg)) {
+      if (msg.account !== key.address) return "This link request is for a different account than this Home Key protects.";
+      if (msg.chainId !== NETWORK.chainId) return `This link request is for ${msg.chainId}, not ${NETWORK.name}.`;
+      const m = minutesLeft(msg.expiresAt);
+      const text =
+        msg.mode === "register"
+          ? "Make this Home Key the post-quantum key of your account"
+          : "Replace the post-quantum key made from your 24 words with this Home Key";
+      return {
+        title: "Link this Home Key",
+        lines: [{ typeUrl: "link", text, risk: "critical" }],
+        meta: [
+          ["Account", shortAddress(msg.account)],
+          ["After this", "Your 24 words alone can no longer move your money"],
+          ["Expires", expiresText(m)],
+        ],
+        blocked: m <= 0 ? "The request has expired. Start linking again on your phone." : null,
+        sign: async () => signLinkRequest(msg, key.pq),
+        summary: text,
+      };
+    }
+
+    if (isVaultRequest(msg)) {
+      if (msg.account !== key.address) return "This vault request is for a different account than this Home Key protects.";
+      if (msg.evmChainId !== String(NETWORK.evmChainId)) return `This vault request is for chain ${msg.evmChainId}, not ${NETWORK.name}.`;
+      const d = describeVaultRequest(msg);
+      const m = minutesLeft(msg.deadline);
+      return {
+        title: "Your phone is asking to",
+        lines: d.lines,
+        meta: [
+          ["Vault", shortAddress(msg.vault)],
+          ["Request number", msg.nonce],
+          ["Expires", expiresText(m)],
+        ],
+        blocked: m <= 0 ? "The request has expired. Make a new one on your phone." : !d.understood ? "This Home Key cannot read this vault request. Refuse it." : null,
+        sign: async () => signVaultRequest(msg, key.pq),
+        summary: d.lines.map((l) => l.text).join(". "),
+      };
+    }
+
+    return "That is not a Seedproof request.";
+  };
 
   return (
     <div className="device device-home">
@@ -79,29 +170,20 @@ export function HomeKey() {
           <Ready
             pq={key.pq}
             onRequest={(msg) => {
-              if (!isApprovalRequest(msg)) return setScreen({ name: "refused", why: "That is not a Seedproof request." });
-              if (msg.account !== key.address)
-                return setScreen({ name: "refused", why: "This request is for a different account than this Home Key protects." });
-              if (msg.chainId !== NETWORK.chainId)
-                return setScreen({ name: "refused", why: `This request is for ${msg.chainId}, not ${NETWORK.name}.` });
-              setScreen({ name: "review", req: msg, decoded: decodeRequestBody(msg) });
+              const r = toReview(msg);
+              setScreen(typeof r === "string" ? { name: "refused", why: r } : { name: "review", review: r });
             }}
           />
         )}
 
-        {screen.name === "review" && key && (
+        {screen.name === "review" && (
           <Review
-            req={screen.req}
-            decoded={screen.decoded}
+            review={screen.review}
             onRefuse={() => setScreen({ name: "ready" })}
             onApprove={async () => {
               try {
-                const res = await approveRequest(screen.req, key.pq, () => true);
-                setScreen({
-                  name: "signed",
-                  summary: screen.decoded.lines.map((l) => l.text).join(". "),
-                  frames: encodeFrames(res),
-                });
+                const answer = await screen.review.sign();
+                setScreen({ name: "signed", summary: screen.review.summary, frames: encodeFrames(answer) });
               } catch (e) {
                 setScreen({ name: "refused", why: e instanceof Error ? e.message : "The Home Key refused to sign." });
               }
@@ -115,7 +197,7 @@ export function HomeKey() {
               <h1 className="display device-title">Signed. Now show your phone.</h1>
               <p className="device-sub">{screen.summary}</p>
             </div>
-            <AnimatedQr frames={screen.frames} color="#3F2E0B" label="Signature for your phone" />
+            <AnimatedQr frames={screen.frames} color="#3F2E0B" label="Answer for your phone" />
             <p className="small home-note">This signature works once, for this request only. It cannot be reused for a bigger amount or another address.</p>
             <button type="button" className="btn btn-brass-outline btn-block" onClick={() => setScreen({ name: "ready" })}>
               Done
@@ -282,25 +364,14 @@ function Ready({ pq, onRequest }: { pq: PqcKeypair; onRequest: (msg: unknown) =>
   );
 }
 
-function Review({
-  req,
-  decoded,
-  onApprove,
-  onRefuse,
-}: {
-  req: ApprovalRequest;
-  decoded: DecodedRequest;
-  onApprove: () => void;
-  onRefuse: () => void;
-}) {
-  const minutes = Math.max(0, Math.round((req.expiresAt - Date.now() / 1000) / 60));
-  const blocked = !decoded.understood || decoded.hasExtension || minutes <= 0;
+function Review({ review, onApprove, onRefuse }: { review: PendingReview; onApprove: () => void; onRefuse: () => void }) {
+  const [busy, setBusy] = useState(false);
   return (
     <section className="stack">
-      <h1 className="display device-title">Your phone is asking to</h1>
+      <h1 className="display device-title">{review.title}</h1>
       <div className="review-card">
         <ul className="review-lines">
-          {decoded.lines.map((l, i) => (
+          {review.lines.map((l, i) => (
             <li key={i} className={`risk-${l.risk}`}>
               <span className="review-line">{l.text}</span>
               {l.risk === "critical" && <span className="tiny review-flag">Read this one twice</span>}
@@ -308,39 +379,37 @@ function Review({
           ))}
         </ul>
         <dl className="review-meta">
-          <dt>Account</dt>
-          <dd>{shortAddress(req.account)}</dd>
-          <dt>Expires</dt>
-          <dd>{minutes > 0 ? `In ${minutes} minute${minutes === 1 ? "" : "s"}` : "Expired"}</dd>
-          <dt>Network</dt>
-          <dd>{NETWORK.name}</dd>
-          {decoded.memo && (
-            <>
-              <dt>Memo</dt>
-              <dd>{decoded.memo}</dd>
-            </>
-          )}
+          {review.meta.map(([k, v]) => (
+            <div key={k} style={{ display: "contents" }}>
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
         </dl>
       </div>
       <p className="small home-note">
-        This was read from the transaction itself, not from your phone's description of it. If it is not what you asked for, refuse
-        it and close your window.
+        This was read from the request itself, not from your phone's description of it. If it is not what you asked for, refuse it
+        and close your window.
       </p>
-      {blocked && (
+      {review.blocked && (
         <div className="notice notice-bad">
           <div>
             <strong>Cannot sign this</strong>
-            <span>
-              {minutes <= 0
-                ? "The request has expired. Make a new one on your phone."
-                : "It contains something this Home Key cannot read. Refuse it."}
-            </span>
+            <span>{review.blocked}</span>
           </div>
         </div>
       )}
       <div className="stack-tight">
-        <button type="button" className="btn btn-brass btn-block btn-tall" onClick={onApprove} disabled={blocked}>
-          Approve with Home Key
+        <button
+          type="button"
+          className="btn btn-brass btn-block btn-tall"
+          disabled={Boolean(review.blocked) || busy}
+          onClick={() => {
+            setBusy(true);
+            onApprove();
+          }}
+        >
+          {busy ? "Signing…" : "Approve with Home Key"}
         </button>
         <button type="button" className="btn btn-brass-outline btn-block" onClick={onRefuse}>
           Refuse

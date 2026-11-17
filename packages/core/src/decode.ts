@@ -45,7 +45,7 @@ function short(addr: string): string {
   return addr.length > 16 ? `${addr.slice(0, 10)}...${addr.slice(-6)}` : addr;
 }
 
-export function decodeRequestBody(req: Pick<ApprovalRequest, "bodyB0">): DecodedRequest {
+export function decodeRequestBody(req: Pick<ApprovalRequest, "bodyB0"> & Partial<Pick<ApprovalRequest, "account">>): DecodedRequest {
   const body = TxBody.decode(b64.dec(req.bodyB0));
   const lines: DecodedLine[] = [];
   let understood = true;
@@ -57,7 +57,7 @@ export function decodeRequestBody(req: Pick<ApprovalRequest, "bodyB0">): Decoded
         const amounts = m.amount.map((c) => formatCoin(c.amount, c.denom)).join(" + ");
         lines.push({
           typeUrl: any.typeUrl,
-          text: `Send ${amounts} to ${short(m.toAddress)}`,
+          text: `Send ${amounts} to ${m.toAddress === req.account ? "your own account" : short(m.toAddress)}`,
           risk: "high",
         });
         break;
