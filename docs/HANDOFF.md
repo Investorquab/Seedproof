@@ -30,7 +30,7 @@ How the split works: the chain's PQ signature covers the tx body *without* the P
 
 | Area | State |
 |---|---|
-| Core protocol (`packages/core`) | Done. 62 tests. Split signing for both `eth_secp256k1` (unified, QoreX-style) and Cosmos `secp256k1` accounts; clear-signing decoder; exposure check; Home Key linking; vault requests; animated-QR frames; Shamir; guardians; `MsgConvertCoin` |
+| Core protocol (`packages/core`) | Done. 62 tests. Split signing for both `eth_secp256k1` (0x accounts) and Cosmos `secp256k1` accounts; clear-signing decoder; exposure check; Home Key linking; vault requests; animated-QR frames; Shamir; guardians; `MsgConvertCoin` |
 | Vault contract (`contracts`) | v1 **deployed on testnet** (`0xadB2…f27C`, the drill contract). v2 in the repo adds a registered Pocket that top-ups must pay (not deployed until after the drill). 80 Hardhat tests with real ML-DSA-87 signatures, including seeded property tests (`test/properties.test.ts`). Slither: 8 findings, all reviewed, none needing a change (`docs/audit/SLITHER.md`). Not yet: fuzz/invariant tests, Slither, 100+ test target, QCAI audits |
 | On-chain proof | **Done**. R1 to R5 all passed on qorechain-diana; seven thief attempts refused. See TESTNET.md |
 | Web app (`apps/web`) | Landing page with live exposure check, Pocket, Home Key, Guardian pages. Built from approved mockups. Pocket opens QoreX (classic) and 0x accounts and only opens scoped windows. **Vault screen built** (`PocketVault.tsx`, `lib/vault.ts`): balances, today's top-up left, top up, withdraw with countdown, cancel, finish when ready, guardians line; shown only when the vault trusts this account's registered Home Key. Top-up, withdraw and cancel checked end to end in headless Chrome on the live chain (TESTNET.md). Not yet: hosting; a way for each user to deploy their own vault from the app (today `config.ts` points at the one demo vault) |
@@ -65,7 +65,7 @@ packages/core/            the protocol, framework-free TypeScript (imported by t
   scripts/                  live-chain scripts (section 5)
 contracts/                Hardhat 2 + solc-js 0.8.28 (compiles offline)
   contracts/SeedproofVault.sol, interfaces/IQorePQC.sol
-  test/                     67 tests; helpers install a pqcVerify double at 0x...0a01
+  test/                     80 tests (incl. properties.test.ts); helpers install a pqcVerify double at 0x...0a01
   scripts/deploy.ts         deploy to diana;  deployments/diana.json  the live vault
 docs/                     this file, PLAN, TESTNET, design mockups
 ```
@@ -185,7 +185,7 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 - [x] Scoped EVM window used for real (`allowedTargets` = vault)
 - [x] `pqcVerify` used in the vault (point to it clearly in README)
 - [ ] Two-stage QCAI audit in `docs/audit/` and `docs/AUDIT.md`
-- [ ] 100+ tests, fuzz/invariants, Slither report
+- [x] 142 tests in total (80 contract incl. property tests, 62 core); Slither report (docs/audit/SLITHER.md)
 - [ ] Project page text matches the final build; cover image; video up to 3 minutes; every qor1 address listed
 - [ ] Q-Day Drill proof hash submitted by 19 Nov 23:59 UTC
 - [ ] People's Choice vote 6 to 15 Dec; jury change requests from 6 Dec (48 h to answer); live demo 16 Dec
