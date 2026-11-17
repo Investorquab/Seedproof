@@ -55,3 +55,15 @@ describe("split signing for unified (eth_secp256k1) accounts", () => {
     expect(s <= 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0n).toBe(true);
   });
 });
+
+describe("account kinds", () => {
+  it("labels the signer key by account kind (QoreX classic vs 0x unified)", async () => {
+    const { AuthInfo } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
+    const base = { chainId: CHAIN, account: "qor1x", classicalPubkey: new Uint8Array(33).fill(2), accountNumber: 1n, sequence: 0n, messages: [], fee: FEE, signBytesVersion: "v2" as const };
+    const type = (pubkeyType?: "secp256k1" | "eth_secp256k1") =>
+      AuthInfo.decode(Buffer.from(createApprovalRequest({ ...base, pubkeyType }).authInfo, "base64")).signerInfos[0]!.publicKey!.typeUrl;
+    expect(type("secp256k1")).toBe("/cosmos.crypto.secp256k1.PubKey");
+    expect(type("eth_secp256k1")).toBe("/cosmos.evm.crypto.v1.ethsecp256k1.PubKey");
+    expect(type()).toBe("/cosmos.evm.crypto.v1.ethsecp256k1.PubKey");
+  });
+});

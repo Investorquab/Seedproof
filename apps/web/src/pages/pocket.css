@@ -14,3 +14,7 @@
 .pocket-ask-card { background: var(--card); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 6px; }
 .pocket-ask-line { font-size: 19px; font-weight: 700; line-height: 1.35; }
 .protected-line { margin: 0; color: var(--verified); font-weight: 700; }
+.pocket-actions > :only-child { grid-column: 1 / -1; }
+.account-kind { margin: 0; line-height: 1.5; }
+.account-kind .btn-ghost { padding: 0; margin-left: 2px; text-decoration: underline; text-underline-offset: 3px; }
+.window-scope-note { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--paper); color: var(--ink-soft); line-height: 1.45; }

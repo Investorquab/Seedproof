@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/qore-rest/:path*", "destination": "https://api-testnet.qore.host/:path*" },
+    { "source": "/((?!qore-rest|assets|favicon).*)", "destination": "/index.html" }
+  ]
+}

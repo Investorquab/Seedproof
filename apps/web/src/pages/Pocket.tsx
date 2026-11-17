@@ -19,7 +19,10 @@ import {
 import {
   MSG_SEND_TYPE_URL,
   closeEvmWindowMsg,
+  deriveNativeAccount,
+  derivePqcCanonical,
   deriveUnifiedAccount,
+  directSignerFromPrivateKey,
   type PqcKeypair,
   fetchEvmWindow,
   openEvmWindowMsg,
@@ -30,15 +33,28 @@ import { AnimatedQr } from "../components/AnimatedQr";
 import { FrameReader } from "../components/FrameReader";
 import { hasSealed, seal, unseal, forget } from "../lib/sealed";
 import { accountInfo, broadcast, explorerTx, nativeBalance, registeredPqcKey, type BroadcastOutcome } from "../lib/chain";
-import { NETWORK, shortAddress } from "../config";
+import { FEST_TOKENS, NETWORK, VAULT_ADDRESS, shortAddress } from "../config";
 import "./device.css";
 import "./pocket.css";
 
 const STORE = "seedproof.pocket.v1";
+/** Which account the 24 words open: not secret, so kept in plain storage. */
+const KIND_STORE = "seedproof.pocket.kind";
+
+/**
+ * qorex: the classic account QoreX creates (m/44'/118'). Native lane only: it has no EVM key,
+ *        so nothing on it can move without the Home Key.
+ * evm:   the account MetaMask-style wallets use (m/44'/60'). Same 24 words, different address,
+ *        with a 0x twin that can spend inside a scoped EVM window.
+ */
+type AccountKind = "qorex" | "evm";
 const FEE = { amount: [{ denom: "uqor", amount: "100000" }], gasLimit: 1_000_000n };
 
 interface Wallet {
+  kind: AccountKind;
   address: string;
+  /** 0x twin, evm accounts only. */
+  evm?: string;
   publicKey: Uint8Array;
   signer: OfflineDirectSigner;
   /** Kept in memory while open: needed once, to rotate away from the seed-derived key. */
@@ -52,6 +68,8 @@ type Protection = "checking" | "none" | "seed" | "home" | "unknown";
 
 interface WindowView {
   live: boolean;
+  nativeOnly: boolean;
+  targets: string[];
   remainingTxs: string;
   remainingValue: string;
   remainingBlocks: string;
@@ -74,18 +92,36 @@ export function Pocket() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [locked, setLocked] = useState(() => hasSealed(STORE));
 
-  const open = async (mnemonic: string) => {
-    // Unified account (m/44'/60'): one key for the qor1 address and its 0x twin,
-    // so the EVM window covers the same account the phone spends from.
-    const acct = await deriveUnifiedAccount(mnemonic);
-    const pub = hexToBytes(acct.publicKey as `0x${string}`);
-    setWallet({
-      address: acct.cosmos,
-      publicKey: pub,
-      signer: ethDirectSigner(acct.privateKey as `0x${string}`, acct.cosmos, pub),
-      mnemonic,
-      seedPqc: acct.pqc,
-    });
+  const open = async (mnemonic: string, want?: AccountKind) => {
+    const [classic, unified] = await Promise.all([deriveNativeAccount(mnemonic), deriveUnifiedAccount(mnemonic)]);
+    const opened: Record<AccountKind, Wallet> = {
+      qorex: {
+        kind: "qorex",
+        address: classic.address,
+        publicKey: classic.publicKey,
+        signer: await directSignerFromPrivateKey(classic.privateKey, "qor"),
+        mnemonic,
+        seedPqc: derivePqcCanonical(classic.address, mnemonic),
+      },
+      evm: {
+        kind: "evm",
+        address: unified.cosmos,
+        evm: unified.evm,
+        publicKey: hexToBytes(unified.publicKey as `0x${string}`),
+        signer: ethDirectSigner(unified.privateKey as `0x${string}`, unified.cosmos, hexToBytes(unified.publicKey as `0x${string}`)),
+        mnemonic,
+        seedPqc: unified.pqc,
+      },
+    };
+    let kind = want ?? (readKind() as AccountKind | null);
+    if (!kind) {
+      // First open: use whichever account is already live on chain; the QoreX one if both or neither.
+      const live = async (a: string) => (await registeredPqcKey(a).catch(() => null)) !== null || (await nativeBalance(a).catch(() => 0n)) > 0n;
+      const [q, e] = await Promise.all([live(opened.qorex.address), live(opened.evm.address)]);
+      kind = e && !q ? "evm" : "qorex";
+    }
+    writeKind(kind);
+    setWallet(opened[kind]);
   };
 
   return (
@@ -108,7 +144,13 @@ export function Pocket() {
             }}
           />
         )}
-        {wallet && <PocketHome wallet={wallet} />}
+        {wallet && (
+          <PocketHome
+            key={wallet.address}
+            wallet={wallet}
+            onSwitch={() => open(wallet.mnemonic, wallet.kind === "qorex" ? "evm" : "qorex")}
+          />
+        )}
       </div>
     </div>
   );
@@ -190,7 +232,23 @@ function PocketUnlock({ onReady, onReset }: { onReady: (m: string) => Promise<vo
   );
 }
 
-function PocketHome({ wallet }: { wallet: Wallet }) {
+function readKind(): string | null {
+  try {
+    return localStorage.getItem(KIND_STORE);
+  } catch {
+    return null;
+  }
+}
+
+function writeKind(kind: AccountKind) {
+  try {
+    localStorage.setItem(KIND_STORE, kind);
+  } catch {
+    /* storage unavailable: the choice just is not remembered */
+  }
+}
+
+function PocketHome({ wallet, onSwitch }: { wallet: Wallet; onSwitch: () => void }) {
   const [balance, setBalance] = useState<bigint | null>(null);
   const [win, setWin] = useState<WindowView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -216,6 +274,8 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
       setBalance(b);
       setWin({
         live: Boolean(w.live),
+        nativeOnly: Boolean(w.nativeOnly),
+        targets: (w.allowedTargets ?? []).map((t) => t.toLowerCase()),
         remainingTxs: String(w.remainingTxs ?? "0"),
         remainingValue: String(w.remainingValue ?? "0"),
         remainingBlocks: String(w.remainingBlocks ?? "0"),
@@ -236,6 +296,7 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
       chainId: NETWORK.chainId,
       account: wallet.address,
       classicalPubkey: wallet.publicKey,
+      pubkeyType: wallet.kind === "evm" ? "eth_secp256k1" : "secp256k1",
       accountNumber: info.accountNumber,
       sequence: info.sequence,
       messages,
@@ -274,6 +335,7 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
           chainId: NETWORK.chainId,
           account: wallet.address,
           classicalPubkey: wallet.publicKey,
+          pubkeyType: wallet.kind === "evm" ? "eth_secp256k1" : "secp256k1",
           accountNumber: info.accountNumber,
           sequence: info.sequence,
           messages: [linkMsg],
@@ -291,8 +353,16 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
     });
   };
 
-  const exposure = win?.live ? BigInt(win.remainingValue) : 0n;
+  // What a thief holding only the 24 words could move right now. Only a live EVM window gives them
+  // anything: its QOR cap (value plus fees), and the whole balance of any token contract it lists.
+  const exposure = wallet.kind === "evm" && win?.live ? BigInt(win.remainingValue) : 0n;
   const atRisk = balance === null ? null : exposure < balance ? exposure : balance;
+  const exposedTokens =
+    wallet.kind === "evm" && win?.live && !win.nativeOnly
+      ? win.targets.length === 0
+        ? ["every token on this account"]
+        : FEST_TOKENS.filter((t) => win.targets.includes(t.address.toLowerCase())).map((t) => `all your ${t.symbol}`)
+      : [];
 
   if (flow.name === "ask") {
     return (
@@ -349,7 +419,11 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
         </div>
       )}
       {protection === "home" && (
-        <p className="small protected-line">Protected by your Home Key. Your 24 words alone can only spend today's window.</p>
+        <p className="small protected-line">
+          {wallet.kind === "qorex"
+            ? "Protected by your Home Key. Your 24 words alone can move nothing."
+            : "Protected by your Home Key. Your 24 words alone can only spend what an open window allows."}
+        </p>
       )}
       <div className="pocket-card">
         <div className="stack-tight" style={{ gap: 4 }}>
@@ -358,7 +432,7 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
             {balance === null ? "…" : qor(balance)} <span>QOR</span>
           </span>
         </div>
-        {win && (
+        {wallet.kind === "evm" && win && (
           <div className="stack-tight" style={{ gap: 8 }}>
             <div className="pocket-row small pocket-soft">
               <span>{win.live ? `Window open, ${win.remainingBlocks} blocks left` : "No window open"}</span>
@@ -372,22 +446,33 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
             : atRisk === 0n
               ? "If someone has your 24 words, they can take nothing right now."
               : `If someone has your 24 words, this is the most they could take right now: ${qor(atRisk)} QOR.`}
+          {exposedTokens.length > 0 && ` Plus ${exposedTokens.join(" and ")}, while this window is open.`}
         </p>
         <div className="pocket-actions">
           <button type="button" className="btn pocket-btn-light" onClick={() => setFlow({ name: "send" })}>
             Send QOR
           </button>
-          {win?.live ? (
-            <button type="button" className="btn pocket-btn-dark" onClick={() => ask([closeEvmWindowMsg(wallet.address)])}>
-              Close window
-            </button>
-          ) : (
-            <button type="button" className="btn pocket-btn-dark" onClick={() => setFlow({ name: "window" })}>
-              Open window
-            </button>
-          )}
+          {wallet.kind === "evm" &&
+            (win?.live ? (
+              <button type="button" className="btn pocket-btn-dark" onClick={() => ask([closeEvmWindowMsg(wallet.address)])}>
+                Close window
+              </button>
+            ) : (
+              <button type="button" className="btn pocket-btn-dark" onClick={() => setFlow({ name: "window" })}>
+                Open window
+              </button>
+            ))}
         </div>
       </div>
+
+      <p className="small muted account-kind">
+        {wallet.kind === "qorex"
+          ? "QoreX account. It has no EVM side, so every payment goes through your Home Key."
+          : `0x account (${shortAddress(wallet.evm ?? "")}). It can spend inside a small window you open.`}{" "}
+        <button type="button" className="btn btn-ghost small" onClick={onSwitch}>
+          {wallet.kind === "qorex" ? "Use the 0x account instead" : "Use the QoreX account instead"}
+        </button>
+      </p>
 
       {loadError && (
         <div className="notice notice-plain">
@@ -415,14 +500,15 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
       {flow.name === "window" && (
         <WindowForm
           onCancel={() => setFlow({ name: "home" })}
-          onSubmit={(maxTxs, uqor, target) =>
+          onSubmit={(maxTxs, uqor, scope) =>
             ask([
               openEvmWindowMsg({
                 sender: wallet.address,
                 blocks: 14_400,
                 maxTxs,
                 maxValue: uqor,
-                allowedTargets: target ? [target] : [],
+                // Never an open-to-anything window: it would expose every token on the account.
+                ...(scope === "qor" ? { nativeOnly: true } : { allowedTargets: [scope === "vault" ? VAULT_ADDRESS : scope] }),
               }),
             ])
           }
@@ -474,20 +560,21 @@ function SendForm({ onSubmit, onCancel }: { onSubmit: (to: string, uqor: string)
   );
 }
 
-function WindowForm({ onSubmit, onCancel }: { onSubmit: (maxTxs: number, uqor: string, target: string) => Promise<void>; onCancel: () => void }) {
+type WindowScope = "qor" | "vault" | string;
+
+function WindowForm({ onSubmit, onCancel }: { onSubmit: (maxTxs: number, uqor: string, scope: WindowScope) => Promise<void>; onCancel: () => void }) {
+  const [scope, setScope] = useState<WindowScope>("qor");
   const [txs, setTxs] = useState("5");
   const [amount, setAmount] = useState("20");
-  const [target, setTarget] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const token = FEST_TOKENS.find((t) => t.address === scope);
   return (
     <form
       className="pocket-form"
       onSubmit={async (e) => {
         e.preventDefault();
-        const t = target.trim();
-        if (t && !/^0x[0-9a-fA-F]{40}$/.test(t)) return setError("The token must be a 0x contract address.");
         try {
-          await onSubmit(Math.max(1, Math.min(50, Number(txs) || 1)), String(Math.round(Number(amount) * 1_000_000)), t);
+          await onSubmit(Math.max(1, Math.min(50, Number(txs) || 1)), String(Math.round(Number(amount) * 1_000_000)), scope);
         } catch (err) {
           setError(err instanceof Error ? err.message : "Could not build the request.");
         }
@@ -498,16 +585,31 @@ function WindowForm({ onSubmit, onCancel }: { onSubmit: (maxTxs: number, uqor: s
         For about one day, this phone can make a few EVM payments on its own. Anyone with your 24 words could too, so keep it small.
       </p>
       <div className="field">
+        <label htmlFor="scope">What it is for</label>
+        <select id="scope" className="input" value={scope} onChange={(e) => setScope(e.target.value)}>
+          <option value="qor">Send QOR to anyone</option>
+          <option value="vault">Top up from your vault</option>
+          {FEST_TOKENS.map((t) => (
+            <option key={t.address} value={t.address}>
+              Spend {t.symbol}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="small window-scope-note">
+        {scope === "qor"
+          ? "Plain QOR transfers only. Your tokens cannot move through this window."
+          : scope === "vault"
+            ? "Only your vault. Every top-up still needs your Home Key's signature."
+            : `Only the ${token?.symbol} contract. All the ${token?.symbol} on this account can leave while it is open, so keep only today's ${token?.symbol} here.`}
+      </p>
+      <div className="field">
         <label htmlFor="txs">Payments</label>
         <input id="txs" className="input" inputMode="numeric" value={txs} onChange={(e) => setTxs(e.target.value)} />
       </div>
       <div className="field">
-        <label htmlFor="cap">Most QOR that can leave, including fees</label>
+        <label htmlFor="cap">{scope === "qor" ? "Most QOR that can leave, including fees" : "Most QOR for fees"}</label>
         <input id="cap" className="input" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-      </div>
-      <div className="field">
-        <label htmlFor="tgt">Only this token contract (recommended)</label>
-        <input id="tgt" className="input" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="0x…" autoComplete="off" spellCheck={false} />
       </div>
       {error && <p className="small" style={{ color: "var(--refused)", margin: 0 }}>{error}</p>}
       <div className="pocket-actions">
