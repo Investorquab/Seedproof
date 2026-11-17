@@ -12,7 +12,9 @@ Explorer: https://explore.qore.network
 | Pocket (protected by a Home Key) | `qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq` | `0x4dd783A871a2c413F3730CF645fCc60DE05B1A7f` |
 | Steal This Seed | `qor1xkefca25d5dfwwy9tfg9rfs8tujas7pssu0pnd` | `0x35b29C75546d1A9738855a5051a6075F25D87830` |
 
-All three are unified accounts (`m/44'/60'`): one secp256k1 key for the qor1 address and its 0x twin, signed as `eth_secp256k1` on the native lane. That is what QoreX uses, and it is what lets one EVM window cover the account the phone spends from.
+These three are 0x-style accounts (`m/44'/60'`, what MetaMask-style wallets derive): one secp256k1 key for the qor1 address and its 0x twin, signed as `eth_secp256k1` on the native lane, so an EVM window covers the account the phone spends from.
+
+QoreX creates classic accounts instead (`m/44'/118'`, Cosmos `secp256k1`), which have no EVM side at all. That path is proven separately below ("A QoreX-style account").
 
 ## SeedproofVault
 
@@ -58,6 +60,20 @@ After the rotation, the account's registered key equals the Home Key and not the
 | After the delay: Home Key opens a 1-tx window to the vault only | code 0 | `2E23ED9A…AE3231FB` |
 | Execute withdrawal id 0 (anyone may call; the Home Key already signed it when queued) | success, Pocket 50 -> 150 fUSD, 60,894 gas; window then shows 0 txs left | `0x28c9aebb…87b3a` |
 
+### A QoreX-style account (classic, `m/44'/118'`)
+
+Account `qor1eu6r8hjehspjx0z3m9s9vf04keundh8wsg8gzs`, script `s9-qorex.ts`.
+
+| Step | Result | Tx | Gas |
+|---|---|---|---|
+| Funder sends 5 QOR | code 0 | `010C051B…BF4F981` | 201,127 |
+| Register the seed-derived key, as QoreX does on the first transfer | code 0 | `E9A9F8A0…4B22F605` | 278,345 |
+| Rotate to an independent Home Key | code 0 | `77B90FE5…3BDEB9` | 433,139 |
+| Send 0.5 QOR, Home Key signs | **code 0** | `29F79376…ABCBB0A` | 167,121 |
+| Thief with the 24 words sends 0.5 QOR | **refused, `pqc` code 21** | `0C2881EA…34F5969A` | |
+
+A classic account has no EVM key, so after linking there is no window to manage and nothing on it moves without the Home Key.
+
 ### Guardian encryption key and a pool swap
 
 | Step | Result | Tx | Gas |
@@ -75,6 +91,8 @@ A vault top-up estimates at **313,000 gas** (about 0.035 QOR at 112.5 gwei).
 
 - A fresh account cannot send anything until it registers a PQ key: `pqc` code 8, "classical fallback not allowed". The one classical-only tx allowed is `MsgRegisterPQCKeyV2`.
 - EVM transactions from an account with a PQ key need an open window. That includes contract deployment.
+- A window narrowed with `allowedTargets` blocks ERC-20 transfers (their recipient is the token contract) unless that token contract is listed; if it is listed, the whole balance of that token can leave. `nativeOnly` admits only plain QOR transfers. The Pocket only opens one of these three scoped kinds.
+- The REST API and RPC send no CORS headers (only the EVM endpoint does), so a browser app must read REST through a proxy on its own origin. See `apps/web/vite.config.ts` and `apps/web/vercel.json`.
 - The window's `maxValue` counts each transaction's `gasLimit × maxFeePerGas`, and the chain bills at least half the gas limit. Set the gas limit from `eth_estimateGas`, not a round number.
 - Fest tokens arrive as bank coins (`erc20:0x…`). `MsgConvertCoin` (`/cosmos.evm.erc20.v1.MsgConvertCoin`) moves them to the ERC-20 side. SDK 0.14 has no builder for it, so `packages/core/src/convert.ts` adds one.
 - `fetchPqcStatus` caches. Call `clearPqcStatusCache()` before reading right after a rotation.

@@ -33,11 +33,12 @@ The Home Key signs first, on its own device. QoreChain's post-quantum signature 
 - Native transfer: **refused** (`pqc` code 21, the post-quantum signature does not match).
 - Re-key the account: **refused** (key changes need the current post-quantum key).
 - Vault withdrawal: **refused** (needs a Home Key signature, then a 24-hour delay).
-- EVM spend: only what today's open window allows. That is your pocket money, and you can close the window from the Home Key.
+- EVM spend: only what today's open window allows, and the Pocket opens only scoped windows (QOR-only, vault-only or one token). On a QoreX (classic) account there is no EVM side at all, so a thief can move nothing.
 
 ### Honest limits
 
-- An EVM window caps transaction count, QOR value, time and target contracts. It does **not** cap ERC-20 amounts, so keep only pocket money on the account and savings in the Vault.
+- An EVM window caps transaction count, QOR value, time and target contracts. It does **not** cap ERC-20 amounts, so a window that lists a token contract exposes that token's whole balance on the account. Keep savings in the Vault.
+- Once your Home Key is linked, the QoreX app can no longer send from that account (it signs with the key made from your 24 words, which the chain now refuses). You send from the Seedproof Pocket; QoreX still shows your balances.
 - Someone forcing you to go home is not stopped. The 24-hour delay and guardian cancel give time to react.
 - Testnet only: `pqcVerify` and the v3.2.8 window options are not on mainnet yet.
 

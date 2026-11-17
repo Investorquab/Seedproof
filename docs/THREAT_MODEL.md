@@ -6,7 +6,7 @@ What each kind of attacker gets, what stops them, and what they can still take. 
 
 1. **Savings in the vault**: fUSD, fETH, fBTC and QOR held by `SeedproofVault`.
 2. **The account itself**: its native balance, and who controls its post-quantum key.
-3. **Pocket money**: what sits on the account for daily spending through the EVM window.
+3. **Pocket money**: on 0x accounts, what sits on the account for daily spending through a scoped EVM window.
 
 ## The pieces and where they live
 
@@ -34,7 +34,14 @@ The attack Seedproof exists for. With a default QoreX account, the seed gives th
 | EVM transfer to his own address | **Refused by the node**: not an allowed target of the open window, or no window open |
 | Vault top-up or withdrawal signed with the seed-derived key | **Reverts** `WrongHomeKey` |
 
-**Still exposed:** whatever the currently open window allows, until it expires or the Home Key closes it. A window caps the number of txs, QOR value (including fees), blocks, and targets. It does **not** cap ERC-20 amounts sent to an allowed target, so allowed targets must be contracts that cannot be drained by the account's classical key alone (the vault is one). Keep only pocket money on the account.
+**Still exposed:**
+- **QoreX (classic) accounts: nothing.** They have no EVM key, so there is no window to abuse; every movement needs the Home Key.
+- **0x accounts:** whatever the currently open window allows, until it expires or the Home Key closes it. A window caps the number of txs, QOR value (including fees), blocks, and targets, but **not** ERC-20 amounts. So the Pocket only opens scoped windows:
+  - QOR-only (`nativeOnly`): at most the QOR cap; tokens cannot move.
+  - Vault-only: only fees; every vault action still needs a Home Key signature.
+  - One token contract: that token's **whole** balance on the account, so keep only today's amount there.
+
+  It never opens an unscoped window, which would expose every token on the account.
 
 **Response:** close the window from the Home Key, then move to a new account (new seed, same Home Key, or a fresh Home Key).
 

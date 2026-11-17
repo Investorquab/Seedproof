@@ -1,6 +1,6 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 19:40 UTC. Kept current as work lands; the change log is at the end._
+_Last updated: 17 Nov 2026, 20:35 UTC. Kept current as work lands; the change log is at the end._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
@@ -33,7 +33,7 @@ How the split works: the chain's PQ signature covers the tx body *without* the P
 | Core protocol (`packages/core`) | Done. 60 tests. Split signing for both `eth_secp256k1` (unified, QoreX-style) and Cosmos `secp256k1` accounts; clear-signing decoder; exposure check; Home Key linking; vault requests; animated-QR frames; Shamir; guardians; `MsgConvertCoin` |
 | Vault contract (`contracts`) | Done and **deployed on testnet**. 67 Hardhat tests with real ML-DSA-87 signatures. Not yet: fuzz/invariant tests, Slither, 100+ test target, QCAI audits |
 | On-chain proof | **Done**. R1 to R5 all passed on qorechain-diana; seven thief attempts refused. See TESTNET.md |
-| Web app (`apps/web`) | Landing page with live exposure check, Pocket, Home Key, Guardian pages. Built from approved mockups. Not yet: vault screen in Pocket, hosting, end-to-end run against the live chain through the UI |
+| Web app (`apps/web`) | Landing page with live exposure check, Pocket, Home Key, Guardian pages. Built from approved mockups. Pocket opens QoreX (classic) and 0x accounts and only opens scoped windows; checked in headless Chrome against the live chain through the REST proxy. Not yet: vault screen in Pocket, hosting, end-to-end run against the live chain through the UI |
 | Q-Day Drill | **Registered** on the project page (17 Nov): Pocket account + vault contract. Proof script ready (`s6-drill-proof.ts`), to run on 18 Nov UTC; hash due on the project page by 19 Nov 23:59 UTC |
 | Project page | Created 17 Nov; all four Ship Weeks badges earned: 3 of 3 SDKs verified; on chain verified: EVM window, hybrid txs, PQC registration with PoP, test tokens. Badges: hybrid tx, PQC contract; QoreSeal key and swap done on chain (press Check). Commits count only after the GitHub App is installed |
 | Submission package | Not started: final README, video, cover image, project page text, QCAI audits, threat model |
@@ -94,7 +94,8 @@ REST `https://api-testnet.qore.host` · RPC `https://rpc-testnet.qore.host` · E
 | Role | qor1 | 0x |
 |---|---|---|
 | Funder / deployer / vault guardian | `qor1yezwppgc3y7dr4un8p4yxp4sum9tsmnpe48ghu` | `0x2644E08518893Cd1D793386a4306B0e6CaB86e61` |
-| Pocket (Home Key protected; proposed drill account) | `qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq` | `0x4dd783A871a2c413F3730CF645fCc60DE05B1A7f` |
+| Pocket, 0x kind (Home Key protected; **registered drill account**) | `qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq` | `0x4dd783A871a2c413F3730CF645fCc60DE05B1A7f` |
+| QoreX-style test account (classic, Home Key protected) | `qor1eu6r8hjehspjx0z3m9s9vf04keundh8wsg8gzs` | none (no EVM key) |
 | Steal This Seed (funded with 20 QOR, no Home Key yet) | `qor1xkefca25d5dfwwy9tfg9rfs8tujas7pssu0pnd` | `0x35b29C75546d1A9738855a5051a6075F25D87830` |
 | Owner's registration wallet (QoreX) | `qor1d3ktmev8ss03m7fyczauzcwac4hjd644rvpejf` | |
 
@@ -105,6 +106,7 @@ REST `https://api-testnet.qore.host` · RPC `https://rpc-testnet.qore.host` · E
 Keys are **not** in git. They live in a local folder that `packages/core/scripts` reads from `.keys/` at the repo root (override with `SEEDPROOF_KEYS_DIR`):
 
 - `.keys/accounts.json`: mnemonic and private key for `funder`, `pocket`, `steal`
+- `.keys/accounts.json` also holds `qorex` (mnemonic of the classic test account) and `.keys/qorex-homekey.txt` its Home Key code
 - `.keys/pocket-homekey.txt`: the Pocket's Home Key recovery code (QRC1). **Whoever holds this controls the vault and the Pocket's native lane.** Without it, the vault funds are stuck until guardians are set up.
 - `.keys/funder-seal-seed.hex`: seed of the funder's QoreSeal keys (guardian 1)
 - `.keys/deploy.env`: `PRIVATE_KEY`, `HOME_KEY_PUBKEY`, `GUARDIANS` for `contracts/scripts/deploy.ts`
@@ -125,6 +127,7 @@ A copy of all three files was sent to the owner on 17 Nov 2026 (`seedproof-keys.
 | `s5-pocket.ts` | Home Key window scoped to the vault, real top-up, thief attempts, over-cap check, queue a withdrawal |
 | `s6-drill-proof.ts` | Q-Day Drill proof: Home Key signed self-send from the pocket |
 | `s8-execute.ts <id>` | Execute a queued vault action from the Pocket (open a 1-tx vault window first with `window.ts`) |
+| `s9-qorex.ts` | The QoreX path: classic account, seed key registered, rotated to a Home Key, send ok, thief refused |
 | `s7-badges.ts` | Funder publishes a QoreSeal key (seed in `.keys/funder-seal-seed.hex`) and swaps in pool 2 (Ship Weeks badges) |
 
 ---
@@ -132,13 +135,15 @@ A copy of all three files was sent to the owner on 17 Nov 2026 (`seedproof-keys.
 ## 6. Things the chain taught us (read before writing chain code)
 
 1. **A new account can do nothing until it registers a PQ key.** `pqc` code 8. The one classical-only tx allowed is `MsgRegisterPQCKeyV2`.
-2. **QoreX-style accounts are unified `eth_secp256k1`** (`m/44'/60'`, `deriveUnifiedAccount`): classical sig is over `keccak256(SignDoc)` as 64-byte r‖s, pubkey type `/cosmos.evm.crypto.v1.ethsecp256k1.PubKey`. Cosmos-path (`118`) accounts have no usable 0x twin, so the EVM window would not cover them. `ethDirectSigner` in `split.ts` handles this and is checked against the SDK's `signHybridEth`.
-3. **Every EVM tx from a PQ-keyed account needs an open window**, contract deployment included. Window `maxValue` counts `gasLimit × maxFeePerGas` of each tx, in uqor.
-4. **The chain bills at least half the gas limit.** A top-up sent with a 1.5M limit cost 750k. Use `eth_estimateGas` (a top-up is about 313k).
-5. **Fest tokens are bank coins** (`erc20:0x…`, case-sensitive). Use `MsgConvertCoin` (`/cosmos.evm.erc20.v1.MsgConvertCoin`) before an EVM contract can hold them.
-6. **`fetchPqcStatus` caches.** Call `clearPqcStatusCache()` before reading after a rotation.
-7. Thief refusals happen at CheckTx, so they never land on chain and cost the account nothing.
-8. Error codes seen: `pqc` 8 no key + classical fallback off; 20 hybrid signature required; 21 PQ signature does not verify; 234 key maintenance needs the hybrid signature.
+2. **Two account kinds from the same 24 words.** QoreX creates classic accounts (`m/44'/118'`, `deriveNativeAccount`, Cosmos `secp256k1`): native lane only, no EVM key, so once a Home Key is linked nothing on them moves without it. MetaMask-style wallets use 0x accounts (`m/44'/60'`, `deriveUnifiedAccount`, `eth_secp256k1`: classical sig over `keccak256(SignDoc)` as 64-byte r‖s, pubkey type `/cosmos.evm.crypto.v1.ethsecp256k1.PubKey`), which also spend on the EVM lane through windows. `createApprovalRequest` takes `pubkeyType`; `ethDirectSigner` signs the 0x kind and is checked against the SDK's `signHybridEth`. The Pocket opens either kind, defaulting to whichever is live on chain (QoreX if both or neither). Both paths are proven on chain (TESTNET.md).
+3. **The testnet REST API and RPC have no CORS headers.** The web app reads REST via `/qore-rest` on its own origin, proxied by Vite (dev and preview) and by `apps/web/vercel.json` when hosted. `VITE_QORE_REST` overrides it.
+4. **Windows must always be scoped.** An unscoped window exposes every ERC-20 on the account (windows do not cap token amounts). The Pocket offers only: QOR-only (`nativeOnly`), vault-only, or one token contract (that token's whole balance is exposed; the app says so).
+5. **Every EVM tx from a PQ-keyed account needs an open window**, contract deployment included. Window `maxValue` counts `gasLimit × maxFeePerGas` of each tx, in uqor.
+6. **The chain bills at least half the gas limit.** A top-up sent with a 1.5M limit cost 750k. Use `eth_estimateGas` (a top-up is about 313k).
+7. **Fest tokens are bank coins** (`erc20:0x…`, case-sensitive). Use `MsgConvertCoin` (`/cosmos.evm.erc20.v1.MsgConvertCoin`) before an EVM contract can hold them.
+8. **`fetchPqcStatus` caches.** Call `clearPqcStatusCache()` before reading after a rotation.
+9. Thief refusals happen at CheckTx, so they never land on chain and cost the account nothing.
+10. Error codes seen: `pqc` 8 no key + classical fallback off; 20 hybrid signature required; 21 PQ signature does not verify; 234 key maintenance needs the hybrid signature.
 
 ---
 
@@ -204,3 +209,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 | 17 Nov 19:10 | Owner registered the drill (Pocket + vault) and earned all four Ship Weeks badges. GitHub App not compulsory but recommended (commit count shows on the project card) |
 | 17 Nov 19:25 | Vault withdrawal id 0 executed after its delay (full queue, wait, execute cycle on chain). Fixed a broken import in `window.ts`. Pocket has no live window going into the drill |
 | 17 Nov 19:40 | THREAT_MODEL.md written (9 attacker cases). It surfaced two vault hardening items, now on the to-do list |
+| 17 Nov 20:35 | Pocket opens both account kinds (QoreX classic by default) and only scoped windows; QoreX path proven on chain (`s9-qorex.ts`); found that testnet REST has no CORS and added a same-origin proxy (Vite + vercel.json). Docs corrected: QoreX accounts are classic `m/44'/118'`, not 0x |
