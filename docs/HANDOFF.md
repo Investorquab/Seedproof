@@ -1,6 +1,6 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 20:35 UTC. Kept current as work lands; the change log is at the end._
+_Last updated: 17 Nov 2026, 20:45 UTC. Kept current as work lands; the change log is at the end._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
@@ -168,7 +168,7 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 5. **Hosting**: deploy `apps/web` (Vercel or similar); the bundle is 3.2 MB, so code-split the routes.
 6. **Submission**: README final (add live addresses and TESTNET results), cover image 16:9 at least 1200x675, 3-minute video (script in PLAN.md section 7), project page Description and How it's made, every testnet address listed, Declared vs Verified all green.
 7. **Vault hardening found by the threat model**: restrict top-ups to the registered Pocket address (a stolen Home Key alone can currently send one day's cap anywhere), and look at the stolen-Home-Key race during rotation (THREAT_MODEL.md case 3).
-8. Build in public daily on the project page and X (#BuildBeforeQDay).
+8. Build in public daily on the project page and X (#BuildBeforeQDay). Drafts live in `docs/posts/`; note in the change log when one is posted.
 
 ---
 
@@ -210,3 +210,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 | 17 Nov 19:25 | Vault withdrawal id 0 executed after its delay (full queue, wait, execute cycle on chain). Fixed a broken import in `window.ts`. Pocket has no live window going into the drill |
 | 17 Nov 19:40 | THREAT_MODEL.md written (9 attacker cases). It surfaced two vault hardening items, now on the to-do list |
 | 17 Nov 20:35 | Pocket opens both account kinds (QoreX classic by default) and only scoped windows; QoreX path proven on chain (`s9-qorex.ts`); found that testnet REST has no CORS and added a same-origin proxy (Vite + vercel.json). Docs corrected: QoreX accounts are classic `m/44'/118'`, not 0x |
+| 17 Nov 20:45 | Drafted the first build-in-public update (`docs/posts/2026-11-17-update.md`), not yet posted |
