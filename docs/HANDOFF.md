@@ -1,6 +1,6 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 18:36 UTC. Kept current as work lands; the change log is at the end._
+_Last updated: 17 Nov 2026, 18:46 UTC. Kept current as work lands; the change log is at the end._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
@@ -196,3 +196,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 |---|---|
 | 17 Nov 18:30 | Handoff written: status, runbook, chain lessons, drill plan, remaining work |
 | 17 Nov 18:36 | Key files sent to the owner; drill account choice explained (register the Pocket, not the personal QoreX wallet) |
+| 17 Nov 18:46 | Owner had not created the project page yet; gave the New project fields (description, how it's made, 4 testnet addresses, kits) and drill registration steps. Ship Weeks badge: paste vault deploy tx `0x5f6e3db2…7b63e10` |
