@@ -1,9 +1,8 @@
 /** Open an EVM window for an account, PQ-signed with its seed key (funder) or Home Key (pocket).
-import { KEYS_DIR } from "./chain.js";
  *  npx tsx scripts/window.ts <account> <blocks> <maxTxs> <maxValueUqor> [target,target]  */
 import { readFileSync } from "node:fs";
 import { openEvmWindowMsg, pqcKeyFromRecoveryCode } from "@qorechain/sdk";
-import { load, sendHybrid, show, getJson } from "./chain.js";
+import { load, sendHybrid, show, getJson, KEYS_DIR } from "./chain.js";
 const [name, blocks, maxTxs, maxValue, targets] = process.argv.slice(2);
 const a = await load(name);
 const key = name === "pocket" ? pqcKeyFromRecoveryCode(readFileSync(`${KEYS_DIR}/pocket-homekey.txt`, "utf8").trim(), a.address) : a.seedPqc;

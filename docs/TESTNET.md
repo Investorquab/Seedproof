@@ -55,6 +55,8 @@ After the rotation, the account's registered key equals the Home Key and not the
 | **R4** Vault top-up of 50 fUSD, Home Key signature checked by `pqcVerify` at `0x…0a01` | success, Pocket balance 50 fUSD | `0x2efc2038…4f6283` |
 | Second top-up of 60 fUSD (cap 100, 50 used) | reverts `OverDailyLimit(50000000)` | none |
 | Queue a 100 fUSD withdrawal (1 hour delay) | success, id 0 | `0x1941e6e4…89d270f2` |
+| After the delay: Home Key opens a 1-tx window to the vault only | code 0 | `2E23ED9A…AE3231FB` |
+| Execute withdrawal id 0 (anyone may call; the Home Key already signed it when queued) | success, Pocket 50 -> 150 fUSD, 60,894 gas; window then shows 0 txs left | `0x28c9aebb…87b3a` |
 
 ### Guardian encryption key and a pool swap
 

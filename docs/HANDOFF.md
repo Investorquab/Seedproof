@@ -1,6 +1,6 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 19:10 UTC. Kept current as work lands; the change log is at the end._
+_Last updated: 17 Nov 2026, 19:25 UTC. Kept current as work lands; the change log is at the end._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
@@ -98,7 +98,7 @@ REST `https://api-testnet.qore.host` · RPC `https://rpc-testnet.qore.host` · E
 | Steal This Seed (funded with 20 QOR, no Home Key yet) | `qor1xkefca25d5dfwwy9tfg9rfs8tujas7pssu0pnd` | `0x35b29C75546d1A9738855a5051a6075F25D87830` |
 | Owner's registration wallet (QoreX) | `qor1d3ktmev8ss03m7fyczauzcwac4hjd644rvpejf` | |
 
-**Vault:** `0xadB21AAC72079Ce455a0b09ee56f069bf5E4f27C`, bound to the Pocket's Home Key, delay **1 hour** (demo; default is 24 h), daily limits 5 QOR / 100 fUSD / 0.05 fETH / 0.002 fBTC. Queued withdrawal id 0 (100 fUSD to the Pocket) became executable about 19:15 UTC on 17 Nov.
+**Vault:** `0xadB21AAC72079Ce455a0b09ee56f069bf5E4f27C`, bound to the Pocket's Home Key, delay **1 hour** (demo; default is 24 h), daily limits 5 QOR / 100 fUSD / 0.05 fETH / 0.002 fBTC. Withdrawal id 0 (100 fUSD) was queued, waited the delay and was executed on 17 Nov; the full cycle is in TESTNET.md.
 
 ### Secrets
 
@@ -124,6 +124,7 @@ A copy of all three files was sent to the owner on 17 Nov 2026 (`seedproof-keys.
 | `s4-fund-vault.ts` | Send tokens and QOR to the vault (needs a funder window) |
 | `s5-pocket.ts` | Home Key window scoped to the vault, real top-up, thief attempts, over-cap check, queue a withdrawal |
 | `s6-drill-proof.ts` | Q-Day Drill proof: Home Key signed self-send from the pocket |
+| `s8-execute.ts <id>` | Execute a queued vault action from the Pocket (open a 1-tx vault window first with `window.ts`) |
 | `s7-badges.ts` | Funder publishes a QoreSeal key (seed in `.keys/funder-seal-seed.hex`) and swaps in pool 2 (Ship Weeks badges) |
 
 ---
@@ -156,7 +157,6 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 ## 8. What is left, in priority order
 
 1. **Drill**: registered. Keep no EVM window open on the Pocket during 18 Nov; proof tx on 18 Nov; owner submits the hash by 19 Nov 23:59 UTC.
-2. **Execute queued withdrawal id 0** (open a 1-tx vault-only window with the Home Key, call `execute(0)` with estimated gas) and add the hash to TESTNET.md.
 3. **docs/THREAT_MODEL.md**: one table, each case (seed stolen, classical key stolen, Home Key stolen, Home Key lost, phone lost, wrench attack, malicious relay, guardian collusion) with what the attacker gets and what stops them.
 4. **Pocket vault screen**: balances, top-up (instant), withdraw (queued, countdown), cancel; uses `VaultRequest` + Home Key round trip; vault address from `contracts/deployments/diana.json`; gas from `estimateGas`.
 5. **Steal This Seed**: give the steal account a Home Key and its own vault, fund pocket and vault, put its real 24 words in `apps/web/src/config.ts` (set `isSample: false`), and add a counter of attempts and value kept.
@@ -202,3 +202,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 | 17 Nov 18:46 | Owner had not created the project page yet; gave the New project fields (description, how it's made, 4 testnet addresses, kits) and drill registration steps. Ship Weeks badge: paste vault deploy tx `0x5f6e3db2…7b63e10` |
 | 17 Nov 19:08 | Project created on the site. Funder registered a QoreSeal key and swapped in pool 2 (badges). Home Key decoder now reads `MsgRegisterKEMKey` and `MsgSwapExactIn` |
 | 17 Nov 19:10 | Owner registered the drill (Pocket + vault) and earned all four Ship Weeks badges. GitHub App not compulsory but recommended (commit count shows on the project card) |
+| 17 Nov 19:25 | Vault withdrawal id 0 executed after its delay (full queue, wait, execute cycle on chain). Fixed a broken import in `window.ts`. Pocket has no live window going into the drill |
