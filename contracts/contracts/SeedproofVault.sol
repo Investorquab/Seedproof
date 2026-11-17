@@ -72,6 +72,7 @@ contract SeedproofVault {
     event Cancelled(uint256 indexed id, address indexed by);
     event Frozen(address indexed guardian);
     event Unfrozen(uint256 nonce);
+    event DailyLimitSet(address indexed token, uint256 limit);
 
     error Expired();
     error WrongHomeKey();
@@ -96,12 +97,25 @@ contract SeedproofVault {
         _lock = 1;
     }
 
-    constructor(bytes32 homeKeyHash_, uint64 delay_, address[] memory guardians_) {
+    /// @param limitTokens_ tokens given a starting daily top-up limit (address(0) = QOR)
+    /// @param limits_ the matching limits; later changes need the Home Key and the delay
+    constructor(
+        bytes32 homeKeyHash_,
+        uint64 delay_,
+        address[] memory guardians_,
+        address[] memory limitTokens_,
+        uint256[] memory limits_
+    ) {
         if (homeKeyHash_ == bytes32(0)) revert WrongHomeKey();
+        if (limitTokens_.length != limits_.length) revert BadLength();
         _setDelay(delay_);
         homeKeyHash = homeKeyHash_;
         for (uint256 i = 0; i < guardians_.length; i++) {
             _setGuardian(guardians_[i], true);
+        }
+        for (uint256 i = 0; i < limitTokens_.length; i++) {
+            dailyLimit[limitTokens_[i]] = limits_[i];
+            emit DailyLimitSet(limitTokens_[i], limits_[i]);
         }
     }
 
@@ -198,6 +212,7 @@ contract SeedproofVault {
         } else if (action == Action.SetDailyLimit) {
             (address token, uint256 limit) = abi.decode(p, (address, uint256));
             dailyLimit[token] = limit;
+            emit DailyLimitSet(token, limit);
         } else if (action == Action.SetDelay) {
             _setDelay(abi.decode(p, (uint64)));
         } else if (action == Action.RotateHomeKey) {

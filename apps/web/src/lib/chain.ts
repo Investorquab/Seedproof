@@ -1,8 +1,9 @@
-import { fetchPqcStatus, pqcStatusPublicKey } from "@qorechain/sdk";
+import { clearPqcStatusCache, fetchPqcStatus, pqcStatusPublicKey } from "@qorechain/sdk";
 import { NETWORK } from "../config";
 
 /** The ML-DSA-87 public key the chain has registered for an account, if any. */
 export async function registeredPqcKey(address: string): Promise<Uint8Array | null> {
+  clearPqcStatusCache(); // the SDK caches status; a fresh read is needed right after linking
   const status = await fetchPqcStatus({ rest: NETWORK.rest, address });
   if (!status.registered) return null;
   return pqcStatusPublicKey(status) ?? null;

@@ -10,6 +10,8 @@ import { TxBody } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import { MsgSend } from "cosmjs-types/cosmos/bank/v1beta1/tx";
 import { qorechainTypes, MSG_SEND_TYPE_URL } from "@qorechain/sdk";
 import { b64, type ApprovalRequest } from "./envelope.js";
+import { MSG_CONVERT_COIN_TYPE_URL, MsgConvertCoinCodec } from "./convert.js";
+import { KNOWN_TOKENS, formatUnits } from "./vault.js";
 
 const pqc = qorechainTypes.pqc;
 
@@ -60,6 +62,20 @@ export function decodeRequestBody(req: Pick<ApprovalRequest, "bodyB0"> & Partial
           text: `Send ${amounts} to ${m.toAddress === req.account ? "your own account" : short(m.toAddress)}`,
           risk: "high",
         });
+        break;
+      }
+      case MSG_CONVERT_COIN_TYPE_URL: {
+        const m = MsgConvertCoinCodec.decode(any.value);
+        const denom = m.coin?.denom ?? "";
+        const token = denom.startsWith("erc20:") ? KNOWN_TOKENS[denom.slice(6)] : undefined; // case-sensitive, as the chain matches it
+        const amount = token ? `${formatUnits(BigInt(m.coin?.amount ?? 0), token.decimals)} ${token.symbol}` : formatCoin(m.coin?.amount ?? "0", denom);
+        const own = req.account && m.sender === req.account;
+        lines.push({
+          typeUrl: any.typeUrl,
+          text: `Move ${amount} to the EVM side, to ${short(m.receiver)}`,
+          risk: token && own ? "high" : "critical",
+        });
+        if (!token) understood = false;
         break;
       }
       case "/qorechain.pqc.v1.MsgOpenEVMWindow": {

@@ -13,7 +13,7 @@ const vectors = JSON.parse(
 describe("SeedproofVault.signedMessage matches packages/core", () => {
   it("returns the shared vector bytes for every case", async () => {
     const Vault = await ethers.getContractFactory("SeedproofVault");
-    const tmp = await Vault.deploy(keccak256(generatePqcKeypair().publicKey), 3600, []);
+    const tmp = await Vault.deploy(keccak256(generatePqcKeypair().publicKey), 3600, [], [], []);
     const code = await ethers.provider.getCode(await tmp.getAddress());
     // signedMessage only reads address(this) and block.chainid, so the runtime
     // code at the vector's address answers exactly like a deployed vault.

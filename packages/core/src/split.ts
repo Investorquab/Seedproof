@@ -13,9 +13,13 @@ import { defaultRegistryTypes } from "@cosmjs/stargate";
 import { encodeSecp256k1Pubkey } from "@cosmjs/amino";
 import { TxBody, TxRaw, SignDoc } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import { SignMode } from "cosmjs-types/cosmos/tx/signing/v1beta1/signing";
+import { PubKey as Secp256k1PubKey } from "cosmjs-types/cosmos/crypto/secp256k1/keys";
+import { keccak256, hexToBytes } from "viem";
+import { sign as secpSign } from "viem/accounts";
 import {
   AlgorithmDilithium5,
   buildHybridSignatureExtension,
+  ETHSECP256K1_PUBKEY_TYPE,
   encodeHybridExtension,
   hybridSignBytes,
   pqcSign,
@@ -27,8 +31,9 @@ import {
 } from "@qorechain/sdk";
 import { ENVELOPE_VERSION, b64, type ApprovalRequest, type ApprovalResponse } from "./envelope.js";
 import { decodeRequestBody } from "./decode.js";
+import { convertRegistryTypes } from "./convert.js";
 
-export const registry = new Registry([...defaultRegistryTypes, ...qorechainRegistryTypes]);
+export const registry = new Registry([...defaultRegistryTypes, ...qorechainRegistryTypes, ...convertRegistryTypes]);
 
 export interface FeeSpec {
   amount: { denom: string; amount: string }[];
@@ -40,6 +45,12 @@ export interface CreateRequestInput {
   account: string;
   /** 33-byte compressed secp256k1 public key of the account. */
   classicalPubkey: Uint8Array;
+  /**
+   * How the chain knows this key. "eth_secp256k1" for unified accounts
+   * (m/44'/60', the ones with a 0x twin, used by QoreX and the EVM window);
+   * "secp256k1" for classic Cosmos-path accounts. Default "eth_secp256k1".
+   */
+  pubkeyType?: "eth_secp256k1" | "secp256k1";
   accountNumber: bigint;
   sequence: bigint;
   messages: readonly EncodeObject[];
@@ -59,8 +70,12 @@ export function createApprovalRequest(input: CreateRequestInput): ApprovalReques
   });
   const bodyB0 = TxBody.encode(body).finish();
 
+  const pubkey =
+    (input.pubkeyType ?? "eth_secp256k1") === "eth_secp256k1"
+      ? { typeUrl: ETHSECP256K1_PUBKEY_TYPE, value: Secp256k1PubKey.encode({ key: input.classicalPubkey }).finish() }
+      : encodePubkey(encodeSecp256k1Pubkey(input.classicalPubkey));
   const authInfo = makeAuthInfoBytes(
-    [{ pubkey: encodePubkey(encodeSecp256k1Pubkey(input.classicalPubkey)), sequence: Number(input.sequence) }],
+    [{ pubkey, sequence: Number(input.sequence) }],
     input.fee.amount,
     Number(input.fee.gasLimit),
     undefined,
@@ -187,3 +202,31 @@ export async function signClassicalOnly(req: ApprovalRequest, signer: OfflineDir
   const { signature } = await signer.signDirect(req.account, signDoc);
   return TxRaw.encode(TxRaw.fromPartial({ bodyBytes, authInfoBytes, signatures: [b64.dec(signature.signature)] })).finish();
 }
+
+/**
+ * cosmjs-style direct signer for a unified (eth_secp256k1) account: the chain
+ * checks secp256k1 over keccak256(SignDoc), as 64-byte r||s with low s.
+ */
+export function ethDirectSigner(privateKey: `0x${string}`, address: string, publicKey: Uint8Array): OfflineDirectSigner {
+  return {
+    async getAccounts() {
+      return [{ address, algo: "secp256k1" as const, pubkey: publicKey }];
+    },
+    async signDirect(signerAddress, signDoc) {
+      if (signerAddress !== address) throw new Error("signer does not hold this account");
+      const hash = keccak256(SignDoc.encode(signDoc).finish());
+      const sig = await secpSign({ hash, privateKey });
+      const rs = new Uint8Array(64);
+      rs.set(hexToBytes(sig.r, { size: 32 }), 0);
+      rs.set(hexToBytes(sig.s, { size: 32 }), 32);
+      return {
+        signed: signDoc,
+        signature: {
+          pub_key: { type: "ethermint/PubKeyEthSecp256k1", value: b64.enc(publicKey) },
+          signature: b64.enc(rs),
+        },
+      };
+    },
+  };
+}
+

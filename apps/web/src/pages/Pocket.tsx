@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { EncodeObject, OfflineDirectSigner } from "@cosmjs/proto-signing";
+import { hexToBytes } from "viem";
 import {
   approveRequest,
   assembleSignedTx,
@@ -13,13 +14,13 @@ import {
   signClassicalOnly,
   type ApprovalResponse,
   type LinkRequest,
+  ethDirectSigner,
 } from "@seedproof/core";
 import {
   MSG_SEND_TYPE_URL,
   closeEvmWindowMsg,
-  deriveNativeAccount,
-  derivePqcCanonical,
-  directSignerFromPrivateKey,
+  deriveUnifiedAccount,
+  type PqcKeypair,
   fetchEvmWindow,
   openEvmWindowMsg,
   validateMnemonic,
@@ -42,6 +43,8 @@ interface Wallet {
   signer: OfflineDirectSigner;
   /** Kept in memory while open: needed once, to rotate away from the seed-derived key. */
   mnemonic: string;
+  /** The post-quantum key QoreX and the SDK derive from the same 24 words. */
+  seedPqc: PqcKeypair;
 }
 
 /** none: no post-quantum key on chain. seed: the key comes from the 24 words. home: a separate Home Key. */
@@ -72,8 +75,17 @@ export function Pocket() {
   const [locked, setLocked] = useState(() => hasSealed(STORE));
 
   const open = async (mnemonic: string) => {
-    const acct = await deriveNativeAccount(mnemonic);
-    setWallet({ address: acct.address, publicKey: acct.publicKey, signer: await directSignerFromPrivateKey(acct.privateKey, "qor"), mnemonic });
+    // Unified account (m/44'/60'): one key for the qor1 address and its 0x twin,
+    // so the EVM window covers the same account the phone spends from.
+    const acct = await deriveUnifiedAccount(mnemonic);
+    const pub = hexToBytes(acct.publicKey as `0x${string}`);
+    setWallet({
+      address: acct.cosmos,
+      publicKey: pub,
+      signer: ethDirectSigner(acct.privateKey as `0x${string}`, acct.cosmos, pub),
+      mnemonic,
+      seedPqc: acct.pqc,
+    });
   };
 
   return (
@@ -197,7 +209,7 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
       setRegistered(reg);
       if (!reg) setProtection("none");
       else {
-        const seedPub = derivePqcCanonical(wallet.address, wallet.mnemonic).publicKey;
+        const seedPub = wallet.seedPqc.publicKey;
         const same = seedPub.length === reg.length && seedPub.every((x, i) => x === reg[i]);
         setProtection(same ? "seed" : "home");
       }
@@ -255,7 +267,7 @@ function PocketHome({ wallet }: { wallet: Wallet }) {
           : "Replace the post-quantum key made from your 24 words with your Home Key",
       onAnswer: async (msg) => {
         if (!isLinkResponse(msg)) throw new Error("That is not a Home Key answer to a link request.");
-        const seedKey = derivePqcCanonical(wallet.address, wallet.mnemonic);
+        const seedKey = wallet.seedPqc;
         const linkMsg = buildLinkMessage(linkReq, msg, { classicalPubkey: wallet.publicKey, oldKey: seedKey });
         const info = await accountInfo(wallet.address);
         const req = createApprovalRequest({
