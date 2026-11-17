@@ -1,8 +1,8 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 23:45 UTC._ **Next owner: Claude Code** (see `CLAUDE.md` at the repo root for rules, commands and the drill duty).
+_Last updated: 17 Nov 2026, 21:00 UTC._ **Next owner: Claude Code** (see `CLAUDE.md` at the repo root for rules, commands and the drill duty).
 
-_Previous update: 17 Nov 2026, 23:20 UTC. Kept current as work lands; the change log is at the end._
+_Kept current as work lands; the change log is at the end (times are UTC, matching the git commits)._
 
 Read this first if you are picking the project up. It covers what Seedproof is, what is done, where everything lives, how to run it, what we learned on the live chain, and what is left before the deadline.
 
@@ -221,20 +221,20 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 
 | When (UTC) | What changed |
 |---|---|
-| 17 Nov 18:30 | Handoff written: status, runbook, chain lessons, drill plan, remaining work |
-| 17 Nov 18:36 | Key files sent to the owner; drill account choice explained (register the Pocket, not the personal QoreX wallet) |
-| 17 Nov 18:46 | Owner had not created the project page yet; gave the New project fields (description, how it's made, 4 testnet addresses, kits) and drill registration steps. Ship Weeks badge: paste vault deploy tx `0x5f6e3db2…7b63e10` |
-| 17 Nov 19:08 | Project created on the site. Funder registered a QoreSeal key and swapped in pool 2 (badges). Home Key decoder now reads `MsgRegisterKEMKey` and `MsgSwapExactIn` |
+| 17 Nov 18:31 | Handoff written: status, runbook, chain lessons, drill plan, remaining work |
+| 17 Nov 18:35 | Key files sent to the owner; drill account choice explained (register the Pocket, not the personal QoreX wallet) |
+| 17 Nov 18:45 | Owner had not created the project page yet; gave the New project fields (description, how it's made, 4 testnet addresses, kits) and drill registration steps. Ship Weeks badge: paste vault deploy tx `0x5f6e3db2…7b63e10` |
+| 17 Nov 19:01 | Project created on the site. Funder registered a QoreSeal key and swapped in pool 2 (badges). Home Key decoder now reads `MsgRegisterKEMKey` and `MsgSwapExactIn` |
 | 17 Nov 19:10 | Owner registered the drill (Pocket + vault) and earned all four Ship Weeks badges. GitHub App not compulsory but recommended (commit count shows on the project card) |
-| 17 Nov 19:25 | Vault withdrawal id 0 executed after its delay (full queue, wait, execute cycle on chain). Fixed a broken import in `window.ts`. Pocket has no live window going into the drill |
-| 17 Nov 19:40 | THREAT_MODEL.md written (9 attacker cases). It surfaced two vault hardening items, now on the to-do list |
-| 17 Nov 20:35 | Pocket opens both account kinds (QoreX classic by default) and only scoped windows; QoreX path proven on chain (`s9-qorex.ts`); found that testnet REST has no CORS and added a same-origin proxy (Vite + vercel.json). Docs corrected: QoreX accounts are classic `m/44'/118'`, not 0x |
-| 17 Nov 20:45 | Drafted the first build-in-public update (`docs/posts/2026-11-17-update.md`), not yet posted |
-| 17 Nov 20:55 | Vault screen mocked up (`docs/design/PocketVault.dc.html`, added to the design canvas); waiting for the owner's approval before building |
-| 17 Nov 21:35 | Vault screen built from the approved mockup; top-up, withdraw and cancel run end to end in a browser on the live chain; vault only shown to the account whose Home Key it trusts. Screenshots in `docs/screens/`. Pocket window used up again before the drill |
-| 17 Nov 22:00 | Vault v2 in code: registered `pocket`, `SetPocket` (action 8), `topUp` pays only the pocket. 73 contract and 62 core tests pass; vectors regenerated; deploy script takes `POCKET`. Deploy is held until after the drill |
-| 17 Nov 22:08 | Steal This Seed account linked to its own Home Key (`steal-homekey.txt`); words still private |
-| 17 Nov 22:30 | Property tests (6 seeded runs by default; a 40 x 150 sweep passed) and Slither (8 findings triaged in `docs/audit/SLITHER.md`). Review found and fixed a no-code token address being treated as paid. 80 contract tests |
-| 17 Nov 22:45 | Routes and the exposure check load lazily (landing 3.3 MB to 258 KB); `vercel.json` carries install, build and rewrites; clean-clone build verified. Waiting on the owner to import the repo in Vercel |
-| 17 Nov 23:20 | Vault factory (v2 vaults) deployed; Pocket finds or creates the user's own vault; Steal This Seed's vault created through the app in a browser and funded. Web broadcast now waits for inclusion (found by the test). 85 contract tests |
-| 17 Nov 23:45 | README rewritten (live results, where `pqcVerify` and the scoped window are, addresses, honest limits). `CLAUDE.md` added for Claude Code. Reusable browser e2e at `apps/web/e2e/pocket.e2e.mts`. Handing off: the drill proof is scheduled for 08:41 UTC on 18 Nov in the previous session; CLAUDE.md says what to do if it has not landed by 12:00 UTC |
+| 17 Nov 19:22 | Vault withdrawal id 0 executed after its delay (full queue, wait, execute cycle on chain). Fixed a broken import in `window.ts`. Pocket has no live window going into the drill |
+| 17 Nov 19:23 | THREAT_MODEL.md written (9 attacker cases). It surfaced two vault hardening items, now on the to-do list |
+| 17 Nov 20:13 | Pocket opens both account kinds (QoreX classic by default) and only scoped windows; QoreX path proven on chain (`s9-qorex.ts`); found that testnet REST has no CORS and added a same-origin proxy (Vite + vercel.json). Docs corrected: QoreX accounts are classic `m/44'/118'`, not 0x |
+| 17 Nov 20:14 | Drafted the first build-in-public update (`docs/posts/2026-11-17-update.md`), not yet posted |
+| 17 Nov 20:15 | Vault screen mocked up (`docs/design/PocketVault.dc.html`, added to the design canvas); waiting for the owner's approval before building |
+| 17 Nov 20:29 | Vault screen built from the approved mockup; top-up, withdraw and cancel run end to end in a browser on the live chain; vault only shown to the account whose Home Key it trusts. Screenshots in `docs/screens/`. Pocket window used up again before the drill |
+| 17 Nov 20:32 | Vault v2 in code: registered `pocket`, `SetPocket` (action 8), `topUp` pays only the pocket. 73 contract and 62 core tests pass; vectors regenerated; deploy script takes `POCKET`. Deploy is held until after the drill |
+| 17 Nov 20:33 | Steal This Seed account linked to its own Home Key (`steal-homekey.txt`); words still private |
+| 17 Nov 20:38 | Property tests (6 seeded runs by default; a 40 x 150 sweep passed) and Slither (8 findings triaged in `docs/audit/SLITHER.md`). Review found and fixed a no-code token address being treated as paid. 80 contract tests |
+| 17 Nov 20:40 | Routes and the exposure check load lazily (landing 3.3 MB to 258 KB); `vercel.json` carries install, build and rewrites; clean-clone build verified. Waiting on the owner to import the repo in Vercel |
+| 17 Nov 20:56 | Vault factory (v2 vaults) deployed; Pocket finds or creates the user's own vault; Steal This Seed's vault created through the app in a browser and funded. Web broadcast now waits for inclusion (found by the test). 85 contract tests |
+| 17 Nov 20:58 | README rewritten (live results, where `pqcVerify` and the scoped window are, addresses, honest limits). `CLAUDE.md` added for Claude Code. Reusable browser e2e at `apps/web/e2e/pocket.e2e.mts`. Handing off: the drill proof is scheduled for 08:41 UTC on 18 Nov in the previous session; CLAUDE.md says what to do if it has not landed by 12:00 UTC |
