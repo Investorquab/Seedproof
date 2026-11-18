@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Steal this seed: live scoreboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0;background:#E9ECEF}
+a{color:#1C2530}a:hover{color:#8A6420}
+a:focus-visible,button:focus-visible{outline:3px solid #B5862F;outline-offset:3px}
+.seed-word{font-family:'Archivo',sans-serif;font-stretch:78%;font-weight:600}
+.stat-n{font-family:'Archivo',sans-serif;font-stretch:108%;font-weight:850;font-size:52px;line-height:1;letter-spacing:-0.02em}
+.state-cap{font-size:13px;color:#5B6672;font-weight:700;text-transform:uppercase;letter-spacing:0.06em}
+</style>
+</helmet>
+<div style="font-family:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;color:#1C2530;background:#E9ECEF;padding:56px 48px 60px">
+<div style="max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:30px">
+
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:40em">
+    <span style="font-size:14px;font-weight:700;color:#8A6420;text-transform:uppercase;letter-spacing:0.08em">Steal this seed</span>
+    <h2 style="margin:0;font-family:'Archivo',sans-serif;font-stretch:112%;font-weight:850;font-size:54px;line-height:0.98;letter-spacing:-0.025em">Here are the words. The money stays.</h2>
+    <p style="margin:0;font-size:19px;line-height:1.55">This testnet account's 24 words are public on purpose. Its post-quantum key is on a Home Key, not in these words, so anyone can try to take its funds and every attempt is refused. Nothing has ever moved.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:28px;align-items:start">
+
+    <!-- The public phrase -->
+    <figure style="margin:0;background:#F7F8F9;border-radius:22px;padding:26px;box-shadow:0 1px 0 #C9CFD6,0 30px 60px -34px rgba(28,37,48,.35);display:flex;flex-direction:column;gap:18px">
+      <figcaption style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <span style="font-family:'Archivo',sans-serif;font-stretch:112%;font-weight:800;font-size:18px">Recovery phrase, public on purpose</span>
+        <span style="font-size:13px;color:#46525F">Testnet qor1xkef…0pnd</span>
+      </figcaption>
+      <ol style="margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px">
+        <sc-for list="{{words}}" as="w" hint-placeholder-count="24">
+          <li style="display:flex;align-items:baseline;gap:8px;padding:9px 11px;border-radius:8px;background:#E9ECEF">
+            <span style="font-size:12px;color:#5B6672;min-width:16px;text-align:right">{{w.n}}</span>
+            <span class="seed-word" style="font-size:17px;letter-spacing:0.01em">{{w.word}}</span>
+          </li>
+        </sc-for>
+      </ol>
+      <p style="margin:0;font-size:13px;line-height:1.45;color:#46525F">Paste these into any QoreChain wallet and try to send. It fails the same way. The Home Key that signs for this account is not made from these words and never leaves its device.</p>
+    </figure>
+
+    <!-- Live scoreboard + action -->
+    <div style="display:flex;flex-direction:column;gap:20px">
+
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+        <div style="background:#F1E3BF;color:#3F2E0B;border-radius:16px;padding:18px 16px;display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:13px;color:#5E4513;font-weight:700">Kept safe</span>
+          <span class="stat-n">1,020</span>
+          <span style="font-size:13px;color:#5E4513;line-height:1.35">fUSD, account and vault, read live from the chain</span>
+        </div>
+        <div style="background:#1C2530;color:#E9ECEF;border-radius:16px;padding:18px 16px;display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:13px;color:#B9C2CC;font-weight:700">Attempts, all refused</span>
+          <span class="stat-n">1,248</span>
+          <span style="font-size:13px;color:#B9C2CC;line-height:1.35">the drill bot, visitors here, and us</span>
+        </div>
+        <div style="background:#FBEDEB;color:#5A1C17;border-radius:16px;padding:18px 16px;display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:13px;color:#8C2620;font-weight:700">Taken</span>
+          <span class="stat-n" style="color:#A8322A">0</span>
+          <span style="font-size:13px;color:#8C2620;line-height:1.35">nothing has ever moved</span>
+        </div>
+      </div>
+
+      <!-- State A: resting, ready to try -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span class="state-cap">Before</span>
+        <div style="background:#fff;border:1px solid #D2D8DE;border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:16px;line-height:1.5">Take the money with the words above. This really builds a transfer signed with these 24 words and broadcasts it to the testnet.</p>
+          <button type="button" style="font:inherit;font-weight:700;font-size:17px;min-height:52px;border:0;border-radius:12px;background:#1C2530;color:#E9ECEF;cursor:pointer">Try to take the money</button>
+        </div>
+      </div>
+
+      <!-- State B: refused result -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span class="state-cap">After the attempt</span>
+        <div role="status" style="background:#FBEDEB;border:1px solid #F0C9C3;border-radius:18px;padding:22px;display:flex;gap:16px;align-items:flex-start">
+          <svg width="30" height="30" viewBox="0 0 28 28" aria-hidden="true" style="flex:none;margin-top:2px"><circle cx="14" cy="14" r="12" fill="none" stroke="#A8322A" stroke-width="2.5"></circle><path d="M9 9l10 10M19 9L9 19" stroke="#A8322A" stroke-width="2.5" stroke-linecap="round"></path></svg>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <strong style="font-family:'Archivo',sans-serif;font-stretch:112%;font-weight:800;font-size:24px;color:#8C2620">Refused</strong>
+            <span style="font-size:16px;line-height:1.5;color:#5A1C17">The chain rejected the transfer. The second signature it needs is a post-quantum signature from the Home Key, and these 24 words cannot make it. <span style="white-space:nowrap">pqc code 21.</span></span>
+            <span style="font-size:14px;color:#5A1C17">Nothing moved. That was attempt #1,249. It cost the account nothing, because the chain refuses it before it reaches a block.</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <p style="margin:0;font-size:14px;line-height:1.5;color:#46525F;max-width:52em">Live numbers. "Kept safe" is read from the chain. "Attempts" counts every try, here and from the Q-Day Drill bot. The 24 words shown are this account's real testnet phrase; the Home Key code is not here and is never published.</p>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1120,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var list = ["salute","orbit","timber","fatigue","candy","narrow","leopard","quote","sketch","voyage","pledge","almost","ritual","gossip","harvest","dizzy","museum","cradle","wagon","frozen","oblige","tunnel","sphere","mando"];
+    var words = list.map(function (w, i) { return { n: i + 1, word: w }; });
+    return { words: words };
+  }
+}
+</script>
+</body>
+</html>
