@@ -1,6 +1,6 @@
 # Seedproof handoff
 
-_Last updated: 17 Nov 2026, 21:00 UTC._ **Next owner: Claude Code** (see `CLAUDE.md` at the repo root for rules, commands and the drill duty).
+_Last updated: 18 Nov 2026, 07:15 UTC._ **Next owner: Claude Code** (see `CLAUDE.md` at the repo root for rules, commands and the drill duty).
 
 _Kept current as work lands; the change log is at the end (times are UTC, matching the git commits)._
 
@@ -36,7 +36,7 @@ How the split works: the chain's PQ signature covers the tx body *without* the P
 | Vault contract (`contracts`) | v1 **deployed on testnet** (`0xadB2…f27C`, the drill contract). v2 in the repo adds a registered Pocket that top-ups must pay (not deployed until after the drill). 85 Hardhat tests with real ML-DSA-87 signatures, including seeded property tests (`test/properties.test.ts`). Slither: 8 findings, all reviewed, none needing a change (`docs/audit/SLITHER.md`). Not yet: fuzz/invariant tests, Slither, 100+ test target, QCAI audits |
 | On-chain proof | **Done**. R1 to R5 all passed on qorechain-diana; seven thief attempts refused. See TESTNET.md |
 | Web app (`apps/web`) | Landing page with live exposure check, Pocket, Home Key, Guardian pages. Built from approved mockups. Pocket opens QoreX (classic) and 0x accounts and only opens scoped windows. **Vault screen built** (`PocketVault.tsx`, `lib/vault.ts`): balances, today's top-up left, top up, withdraw with countdown, cancel, finish when ready, guardians line; shown only when the vault trusts this account's registered Home Key. Top-up, withdraw and cancel checked end to end in headless Chrome on the live chain (TESTNET.md). Each 0x Pocket finds its own vault through the factory, or creates one in the app (Home Key opens a 1-call factory window, then "Create my vault"); tested in a browser on the live chain. Broadcasts now wait for the block. Not yet: hosting |
-| Q-Day Drill | **Registered** on the project page (17 Nov): Pocket account + vault contract. Proof script ready (`s6-drill-proof.ts`), to run on 18 Nov UTC; hash due on the project page by 19 Nov 23:59 UTC |
+| Q-Day Drill | **Registered** (Pocket + v1 vault). **Proof sent 18 Nov 07:12 UTC**: `775AC44B25C96891C54346DB16399ACFA8D086C8856640A0F1892D9D02398008` (code 0). Owner pastes it on the project page by 19 Nov 23:59 UTC. A duplicate proof may also fire from the old session at 08:41 UTC; harmless |
 | Project page | Created 17 Nov; all four Ship Weeks badges earned: 3 of 3 SDKs verified; on chain verified: EVM window, hybrid txs, PQC registration with PoP, test tokens. Badges: hybrid tx, PQC contract; QoreSeal key and swap done on chain (press Check). Commits count only after the GitHub App is installed |
 | Submission package | Not started: final README, video, cover image, project page text, QCAI audits, threat model |
 
@@ -181,7 +181,7 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 
 ## 8. What is left, in priority order
 
-1. **Drill**: registered. Keep no EVM window open on the Pocket during 18 Nov; proof tx on 18 Nov; owner submits the hash by 19 Nov 23:59 UTC.
+1. **Drill**: proof landed (hash above). Keep no EVM window open on the Pocket and leave the v1 vault alone until 18 Nov 23:59 UTC; owner submits the hash by 19 Nov 23:59 UTC. After the drill, check the account and vault for any successful attack and record it.
 2. **Steal This Seed**: Home Key linked (`s10-steal-link.ts`, 17 Nov). Own v2 vault created in the app and funded (17 Nov). Still to do: fund pocket and vault, put its real 24 words in `apps/web/src/config.ts` (set `isSample: false`), and add a counter of attempts and value kept.
 3. **Contracts quality**: done so far: property tests (seeded random walks with invariants after every step; scale with `PROPERTY_RUNS`/`PROPERTY_STEPS`), Slither report in `docs/audit/`. Still to do: QCAI audit stage 1 and 2 (owner runs these from the Dashboard), `docs/audit/` + `docs/AUDIT.md`.
 4. **Hosting**: ready, not yet deployed. The owner imports the repo in Vercel with Root Directory `apps/web` (section 4), then puts the URL in the README and on the project page (Demo field).
@@ -238,3 +238,4 @@ Plan: register the **Pocket** (`qor1fhtc82r35tzp8umnpnmytlxxphs9kxnl2sqrrq`) and
 | 17 Nov 20:40 | Routes and the exposure check load lazily (landing 3.3 MB to 258 KB); `vercel.json` carries install, build and rewrites; clean-clone build verified. Waiting on the owner to import the repo in Vercel |
 | 17 Nov 20:56 | Vault factory (v2 vaults) deployed; Pocket finds or creates the user's own vault; Steal This Seed's vault created through the app in a browser and funded. Web broadcast now waits for inclusion (found by the test). 85 contract tests |
 | 17 Nov 20:58 | README rewritten (live results, where `pqcVerify` and the scoped window are, addresses, honest limits). `CLAUDE.md` added for Claude Code. Reusable browser e2e at `apps/web/e2e/pocket.e2e.mts`. Handing off: the drill proof is scheduled for 08:41 UTC on 18 Nov in the previous session; CLAUDE.md says what to do if it has not landed by 12:00 UTC |
+| 18 Nov 07:15 | Drill proof sent and landed (code 0): `775AC44B…98008`. Drill account untouched overnight (27.32 QOR, 155 fUSD, no window) |

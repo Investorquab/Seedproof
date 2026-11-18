@@ -25,6 +25,14 @@ QoreX creates classic accounts instead (`m/44'/118'`, Cosmos `secp256k1`), which
 - Daily top-up limits: 5 QOR, 100 fUSD, 0.05 fETH, 0.002 fBTC
 - Funded with 500 fUSD, 0.25 fETH, 0.01 fBTC, 8 QOR
 
+## Q-Day Drill proof (18 Nov 2026)
+
+| What | Result | Tx |
+|---|---|---|
+| Normal hybrid-signed native tx from the drill account (self-send 0.01 QOR, post-quantum signature from the Home Key), 07:12 UTC on drill day | code 0, 189,213 gas | `775AC44B25C96891C54346DB16399ACFA8D086C8856640A0F1892D9D02398008` |
+
+State at 07:12 UTC: 27.32 QOR native and 155 fUSD on the EVM side, no live EVM window, nothing sent from the account since 17 Nov.
+
 ## Results
 
 ### The split works (two devices, one transaction)
