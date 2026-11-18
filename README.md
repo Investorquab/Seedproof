@@ -44,6 +44,7 @@ It works for normal QoreX accounts (classic `m/44'/118'`, no EVM side, so nothin
 | Same flow on a classic QoreX-style account | Home Key send accepted, thief refused (code 21) |
 | Vault: Home Key top-up, over-limit top-up, withdrawal with delay, cancel | accepted, refused, waited then paid, cancelled |
 | In the browser app: top-up, withdraw, cancel, create your own vault | all on chain, the Home Key reading each one back in plain words |
+| Q-Day Drill proof: a normal Home Key send from the drill account on drill day (18 Nov) | accepted, code 0, hash `775AC44B…398008` |
 
 ## Where the required pieces are
 

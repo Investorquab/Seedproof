@@ -29,3 +29,4 @@ Seedproof is built AI-native, with a human (Investorquab) directing and reviewin
 | 17 Nov 2026 | Vault factory (contract, 5 tests, deploy), per-user vault lookup and "Create my vault" in the Pocket, broadcast waits for inclusion, Steal This Seed vault created through the app and funded | Asked to finish everything possible before handing off to Claude Code |
 | 17 Nov 2026 | README rewrite, CLAUDE.md for the Claude Code handoff, reusable browser e2e script | Asked for a handoff Claude Code can continue from |
 | 18 Nov 2026 | Drill account check and proof transaction | Asked whether the drill proof had landed |
+| 18 Nov 2026 | Claude Code pickup: installed packages, ran all 147 tests, independently verified the drill proof transaction on chain and synced the repo, recorded the proof in the README | Handed the project to Claude Code; asked to install, test and continue the remaining work |
